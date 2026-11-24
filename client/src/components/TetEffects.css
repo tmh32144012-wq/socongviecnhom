@@ -1,0 +1,121 @@
+/* =====================================================
+   CHỦ ĐỀ TẾT — TÔNG CAM ẤM + BAO LÌ XÌ & CÂU CHÚC RƠI PHÍA SAU
+   STRICT z-index: 0 (Nằm hoàn toàn phía sau mọi nút, thẻ & chức năng!)
+===================================================== */
+
+.tet-effects-layer {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+.tet-ambient-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: #160d09;
+  background-image:
+    radial-gradient(ellipse 62% 38% at 82% 8%, rgba(249, 115, 22, 0.2), transparent 70%),
+    radial-gradient(ellipse 52% 34% at 14% 88%, rgba(234, 88, 12, 0.16), transparent 68%),
+    linear-gradient(160deg, #190e09 0%, #140b08 55%, #1d100a 100%);
+}
+
+/* BAO LÌ XÌ RƠI PHÍA SAU */
+.tet-envelope {
+  position: fixed;
+  top: -64px;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation-name: tetEnvelopeFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.tet-envelope-inner {
+  display: inline-flex;
+  animation-name: tetEnvelopeSway;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  filter: drop-shadow(0 6px 14px rgba(249, 115, 22, 0.22));
+}
+
+@keyframes tetEnvelopeFall {
+  0% {
+    transform: translate3d(0, -10vh, 0) scale(var(--env-scale, 0.85)) rotate(-8deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--env-opacity, 0.48);
+  }
+  85% {
+    opacity: var(--env-opacity, 0.48);
+  }
+  100% {
+    transform: translate3d(var(--env-drift, 24px), 112vh, 0) scale(var(--env-scale, 0.85)) rotate(14deg);
+    opacity: 0;
+  }
+}
+
+@keyframes tetEnvelopeSway {
+  0% {
+    transform: translateX(-10px) rotate(-10deg);
+  }
+  100% {
+    transform: translateX(10px) rotate(10deg);
+  }
+}
+
+/* CÂU CHÚC TẾT RƠI PHÍA SAU */
+.tet-wish-drop {
+  position: fixed;
+  top: -54px;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation-name: tetWishFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.tet-wish-pill {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(249, 115, 22, 0.14);
+  border: 1px solid rgba(251, 146, 60, 0.34);
+  color: #FED7AA;
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(234, 88, 12, 0.14);
+}
+
+@keyframes tetWishFall {
+  0% {
+    transform: translate3d(0, -8vh, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: var(--wish-opacity, 0.45);
+  }
+  85% {
+    opacity: var(--wish-opacity, 0.45);
+  }
+  100% {
+    transform: translate3d(var(--wish-drift, 18px), 110vh, 0);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tet-envelope,
+  .tet-envelope-inner,
+  .tet-wish-drop {
+    animation: none !important;
+    display: none;
+  }
+}

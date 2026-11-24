@@ -1,0 +1,15 @@
+{
+  "name": "websitequanlicongviecnhom",
+  "version": "2.0.0",
+  "description": "Hệ thống Quản lý Công việc Nhóm kiểu Kanban (Trello Clone thu nhỏ)",
+  "scripts": {
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"cyan,green\" \"npm start --prefix server\" \"npm run dev --prefix client\"",
+    "start": "concurrently -n \"SERVER,CLIENT\" -c \"cyan,green\" \"npm start --prefix server\" \"npm run dev --prefix client\"",
+    "server": "npm start --prefix server",
+    "client": "npm run dev --prefix client",
+    "build": "npm run build --prefix client"
+  },
+  "dependencies": {
+    "concurrently": "^10.0.4"
+  }
+}

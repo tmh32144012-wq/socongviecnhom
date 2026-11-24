@@ -1,0 +1,675 @@
+/* =====================================================
+   MASTER THEME SYSTEM — 4 STUDIO THEMES
+   Themes: light | dark | glass (Kính lỏng) | tet (Tết Cam Ấm)
+   Accents: blue | emerald | indigo | orange | rose
+===================================================== */
+
+:root {
+  --font-display: 'Bricolage Grotesque', 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --sidebar-width: 252px;
+  --sidebar-collapsed: 70px;
+  --ui-radius: 11px;
+  --glass-blur: 16px;
+  --glass-surface-alpha: 0.14;
+  --glass-sidebar-alpha: 0.115;
+  --glass-column-alpha: 0.087;
+  --glass-sheen-top: 0.104;
+  --glass-sheen-mid: 0.042;
+  --glass-modal-alpha: 0.259;
+}
+
+/* =====================================================
+   1. LIGHT THEME — STUDIO ALABASTER
+===================================================== */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-main: #F4F5F7;
+  --bg-surface: #FFFFFF;
+  --bg-surface-translucent: rgba(255, 255, 255, 0.88);
+  --bg-surface-elevated: #ECEFF4;
+  --bg-input: #EEF1F6;
+  --bg-hover: #E7ECF3;
+  --border-color: #E1E5ED;
+  --border-strong: #CBD3E0;
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  --text-primary: #111827;
+  --text-secondary: #4E5B70;
+  --text-muted: #8490A4;
+
+  --accent-color: #2563EB;
+  --accent-hover: #1D4ED8;
+  --accent-soft: rgba(37, 99, 235, 0.1);
+  --accent-ring: rgba(37, 99, 235, 0.22);
+  --accent-fg: #FFFFFF;
+  --accent-contrast: #FFFFFF;
+
+  --success: #0F9D68;
+  --success-light: rgba(15, 157, 104, 0.11);
+  --warning: #C97A0C;
+  --warning-light: rgba(201, 122, 12, 0.11);
+  --danger: #DC2626;
+  --danger-light: rgba(220, 38, 38, 0.1);
+  --info: #2563EB;
+  --info-light: rgba(37, 99, 235, 0.1);
+
+  --gray-50: #F8F9FB;
+  --gray-100: #EEF1F6;
+  --gray-200: #E1E5ED;
+  --gray-300: #CBD3E0;
+  --gray-400: #8490A4;
+  --gray-500: #4E5B70;
+  --gray-600: #374151;
+  --gray-700: #27303F;
+  --gray-800: #18202C;
+  --gray-900: #111827;
+
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.05);
+  --shadow: 0 3px 10px rgba(17, 24, 39, 0.06);
+  --shadow-md: 0 10px 24px -6px rgba(17, 24, 39, 0.09);
+  --shadow-lg: 0 20px 40px -10px rgba(17, 24, 39, 0.14);
+  --shadow-primary: 0 1px 2px rgba(17, 24, 39, 0.12);
+
+  /* Legacy Variable Aliases */
+  --bg: var(--bg-main);
+  --surface: var(--bg-surface);
+  --surface-2: var(--bg-input);
+  --card-bg: var(--bg-surface);
+  --input-bg: var(--bg-input);
+  --border: var(--border-color);
+  --today-bg: var(--accent-soft);
+
+  --primary: var(--accent-color);
+  --primary-hover: var(--accent-hover);
+  --primary-light: var(--accent-soft);
+  --primary-bg: var(--accent-soft);
+  --primary-dark: var(--accent-hover);
+
+  --sidebar-bg: #FAFBFC;
+  --sidebar-surface: var(--bg-hover);
+  --sidebar-border: var(--border-color);
+  --sidebar-text: var(--text-secondary);
+  --sidebar-text-muted: var(--text-muted);
+  --sidebar-active-bg: var(--accent-soft);
+  --sidebar-active-text: var(--accent-color);
+
+  --wallpaper-scrim-color: #f4f6fa;
+  --bg-surface-glass: rgba(255, 255, 255, 0.82);
+  --bg-sidebar-glass: rgba(250, 251, 253, 0.84);
+  --bg-column-glass: rgba(241, 244, 249, 0.78);
+}
+
+/* Light theme tone variants */
+:root[data-theme="light"][data-light-tone="cool"] {
+  --bg-main: #EBF0F7;
+  --bg-input: #E4EBF4;
+  --sidebar-bg: #F5F8FC;
+}
+
+:root[data-theme="light"][data-light-tone="warm"] {
+  --bg-main: #F6F2EA;
+  --bg-input: #EFEAE0;
+  --bg-hover: #E8E1D5;
+  --border-color: #E3DDD0;
+  --sidebar-bg: #FAF8F3;
+}
+
+/* =====================================================
+   2. DARK THEME — MIDNIGHT GRAPHITE
+===================================================== */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-main: #10131A;
+  --bg-surface: #171B24;
+  --bg-surface-translucent: rgba(23, 27, 36, 0.88);
+  --bg-surface-elevated: #1D222E;
+  --bg-input: #1E2432;
+  --bg-hover: #252C3D;
+  --border-color: rgba(214, 224, 245, 0.09);
+  --border-strong: rgba(214, 224, 245, 0.17);
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  --text-primary: #F2F5FA;
+  --text-secondary: #9BA7BE;
+  --text-muted: #6C7890;
+
+  --success: #10B981;
+  --success-light: rgba(16, 185, 129, 0.13);
+  --warning: #E09122;
+  --warning-light: rgba(224, 145, 34, 0.14);
+  --danger: #F05252;
+  --danger-light: rgba(240, 82, 82, 0.13);
+  --info: #3B82F6;
+  --info-light: rgba(59, 130, 246, 0.13);
+
+  --gray-50: #171B24;
+  --gray-100: #1E2432;
+  --gray-200: #283042;
+  --gray-300: #39445C;
+  --gray-400: #6C7890;
+  --gray-500: #9BA7BE;
+  --gray-600: #C2CBE0;
+  --gray-700: #DCE2EE;
+  --gray-800: #EAEFF7;
+  --gray-900: #F2F5FA;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.32);
+  --shadow: 0 4px 14px rgba(0, 0, 0, 0.36);
+  --shadow-md: 0 12px 28px -6px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 22px 46px -10px rgba(0, 0, 0, 0.58);
+  --shadow-primary: 0 1px 3px rgba(0, 0, 0, 0.35);
+
+  --sidebar-bg: #131720;
+
+  --wallpaper-scrim-color: #0b0e14;
+  --bg-surface-glass: rgba(22, 26, 36, 0.76);
+  --bg-sidebar-glass: rgba(16, 20, 28, 0.82);
+  --bg-column-glass: rgba(24, 29, 40, 0.72);
+}
+
+/* Dark theme tone variants */
+:root[data-theme="dark"][data-dark-tone="obsidian"] {
+  --bg-main: #090C12;
+  --bg-surface: #11151E;
+  --bg-input: #171C28;
+  --sidebar-bg: #0D1017;
+}
+
+:root[data-theme="dark"][data-dark-tone="navy"] {
+  --bg-main: #0C1424;
+  --bg-surface: #131E34;
+  --bg-input: #1A2844;
+  --sidebar-bg: #0F182B;
+}
+
+/* =====================================================
+   3. LIQUID GLASS THEME — KÍNH LỎNG SIÊU TRONG SUỐT
+===================================================== */
+:root[data-theme="glass"] {
+  color-scheme: dark;
+
+  --bg-main: transparent;
+  --bg-surface: rgba(14, 24, 44, var(--glass-surface-alpha, 0.14));
+  --bg-surface-translucent: rgba(14, 24, 44, var(--glass-sidebar-alpha, 0.115));
+  --bg-surface-elevated: rgba(255, 255, 255, 0.075);
+  --bg-input: rgba(255, 255, 255, 0.055);
+  --bg-hover: rgba(255, 255, 255, 0.115);
+  --border-color: rgba(255, 255, 255, 0.22);
+  --border-strong: rgba(255, 255, 255, 0.38);
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.42), inset 1px 0 0 rgba(255, 255, 255, 0.16), inset 0 -1px 0 rgba(255, 255, 255, 0.07);
+
+  --text-primary: #FFFFFF;
+  --text-secondary: #E2E8F0;
+  --text-muted: #B6C5DC;
+
+  --success: #34D399;
+  --success-light: rgba(52, 211, 153, 0.15);
+  --warning: #FBBF24;
+  --warning-light: rgba(251, 191, 36, 0.15);
+  --danger: #F87171;
+  --danger-light: rgba(248, 113, 113, 0.16);
+  --info: #38BDF8;
+  --info-light: rgba(56, 189, 248, 0.15);
+
+  --gray-50: rgba(255, 255, 255, 0.05);
+  --gray-100: rgba(255, 255, 255, 0.085);
+  --gray-200: rgba(255, 255, 255, 0.14);
+  --gray-300: rgba(255, 255, 255, 0.24);
+  --gray-400: #B6C5DC;
+  --gray-500: #CBD5E1;
+  --gray-600: #E2E8F0;
+  --gray-700: #F1F5F9;
+  --gray-800: #F8FAFC;
+  --gray-900: #FFFFFF;
+
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.16);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 14px 34px -6px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 24px 52px -10px rgba(0, 0, 0, 0.38);
+  --shadow-primary: 0 4px 14px rgba(0, 0, 0, 0.22);
+
+  --sidebar-bg: rgba(10, 18, 34, var(--glass-sidebar-alpha, 0.115));
+
+  --wallpaper-scrim-color: #07101f;
+  --bg-surface-glass: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, var(--glass-sheen-top, 0.104)) 0%,
+    rgba(218, 234, 255, var(--glass-sheen-mid, 0.042)) 42%,
+    rgba(10, 18, 34, var(--glass-surface-alpha, 0.14)) 100%
+  );
+  --bg-sidebar-glass: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, var(--glass-sheen-top, 0.104)) 0%,
+    rgba(10, 18, 34, var(--glass-sidebar-alpha, 0.115)) 100%
+  );
+  --bg-column-glass: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, var(--glass-sheen-mid, 0.042)) 0%,
+    rgba(10, 18, 34, var(--glass-column-alpha, 0.087)) 100%
+  );
+  --bg-modal-glass: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(12, 22, 42, var(--glass-modal-alpha, 0.259)) 100%
+  );
+}
+
+/* =====================================================
+   ACCENT PRESETS (LIGHT, DARK & LIQUID GLASS)
+===================================================== */
+:root[data-accent="emerald"] {
+  --accent-color: #0F9D68;
+  --accent-hover: #0B7F54;
+  --accent-soft: rgba(15, 157, 104, 0.14);
+  --accent-ring: rgba(15, 157, 104, 0.28);
+  --accent-fg: #FFFFFF;
+  --accent-contrast: #FFFFFF;
+}
+
+:root[data-accent="blue"] {
+  --accent-color: #2563EB;
+  --accent-hover: #1D4ED8;
+  --accent-soft: rgba(37, 99, 235, 0.14);
+  --accent-ring: rgba(37, 99, 235, 0.28);
+  --accent-fg: #FFFFFF;
+  --accent-contrast: #FFFFFF;
+}
+
+:root[data-accent="indigo"] {
+  --accent-color: #4F46E5;
+  --accent-hover: #4338CA;
+  --accent-soft: rgba(79, 70, 229, 0.14);
+  --accent-ring: rgba(79, 70, 229, 0.28);
+  --accent-fg: #FFFFFF;
+  --accent-contrast: #FFFFFF;
+}
+
+:root[data-accent="orange"] {
+  --accent-color: #EA580C;
+  --accent-hover: #C2410C;
+  --accent-soft: rgba(234, 88, 12, 0.15);
+  --accent-ring: rgba(234, 88, 12, 0.3);
+  --accent-fg: #FFFFFF;
+  --accent-contrast: #FFFFFF;
+}
+
+:root[data-accent="rose"] {
+  --accent-color: #D12553;
+  --accent-hover: #AE1B42;
+  --accent-soft: rgba(209, 37, 83, 0.14);
+  --accent-ring: rgba(209, 37, 83, 0.28);
+  --accent-fg: #FFFFFF;
+  --accent-contrast: #FFFFFF;
+}
+
+/* =====================================================
+   4. CHỦ ĐỀ TẾT — TÔNG CAM ẤM HIỆN ĐẠI
+   Hiệu ứng bao lì xì & câu chúc rơi hoàn toàn ở lớp nền sau (z-index: 0)
+===================================================== */
+:root[data-theme="tet"] {
+  color-scheme: dark;
+
+  --bg-main: #160D09;
+  --bg-surface: rgba(31, 18, 12, 0.86);
+  --bg-surface-translucent: rgba(26, 15, 10, 0.88);
+  --bg-surface-elevated: rgba(39, 23, 15, 0.86);
+  --bg-input: rgba(46, 27, 18, 0.88);
+  --bg-hover: rgba(58, 34, 22, 0.9);
+  --border-color: rgba(251, 146, 60, 0.2);
+  --border-strong: rgba(251, 146, 60, 0.36);
+  --surface-highlight: inset 0 1px 0 rgba(253, 186, 116, 0.12);
+
+  --text-primary: #FFF7ED;
+  --text-secondary: #D8B9A3;
+  --text-muted: #A3806B;
+
+  /* Chủ đạo màu Cam Tết rực rỡ vừa mắt */
+  --accent-color: #F97316;
+  --accent-hover: #EA580C;
+  --accent-secondary: #FB923C;
+  --accent-soft: rgba(249, 115, 22, 0.16);
+  --accent-ring: rgba(249, 115, 22, 0.34);
+  --accent-fg: #FFFFFF;
+  --accent-contrast: #FFFFFF;
+
+  --success: #34D399;
+  --success-light: rgba(52, 211, 153, 0.14);
+  --warning: #FBBF24;
+  --warning-light: rgba(251, 191, 36, 0.16);
+  --danger: #F87171;
+  --danger-light: rgba(239, 68, 68, 0.18);
+  --info: #FB923C;
+  --info-light: rgba(251, 146, 60, 0.16);
+
+  --gray-50: #22140D;
+  --gray-100: #2E1B12;
+  --gray-200: #3D2418;
+  --gray-300: #523020;
+  --gray-400: #A3806B;
+  --gray-500: #D8B9A3;
+  --gray-600: #EBD4C3;
+  --gray-700: #F6E6D9;
+  --gray-800: #FCEFE4;
+  --gray-900: #FFF7ED;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.38);
+  --shadow: 0 6px 18px rgba(0, 0, 0, 0.44);
+  --shadow-md: 0 12px 30px -6px rgba(0, 0, 0, 0.54);
+  --shadow-lg: 0 22px 46px -10px rgba(0, 0, 0, 0.66);
+  --shadow-primary: 0 2px 10px rgba(249, 115, 22, 0.28);
+
+  --sidebar-bg: rgba(24, 14, 10, 0.88);
+
+  --wallpaper-scrim-color: #160d09;
+  --bg-surface-glass: rgba(31, 18, 12, 0.8);
+  --bg-sidebar-glass: rgba(24, 14, 10, 0.86);
+  --bg-column-glass: rgba(36, 21, 14, 0.78);
+}
+
+/* =====================================================
+   GLOBAL BASE TYPOGRAPHY & CANVAS
+===================================================== */
+html,
+body,
+#root {
+  min-height: 100%;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Live UI Radius override from Settings */
+.tech-panel,
+.settings-console-bar,
+.notif-console-header,
+.ai-header,
+.ai-container,
+.ai-rail-panel,
+.board-card,
+.bento-card,
+.kanban-board-topbar,
+.kanban-column,
+.task-card,
+.category-card,
+.td-main-card,
+.td-side-card,
+.card {
+  border-radius: var(--ui-radius, 11px);
+}
+
+/* =====================================================
+   LAYERING ENGINE: WALLPAPER / LIQUID GLASS / TET EFFECTS
+   Effects always render at z-index: 0, strictly BEHIND UI (z-index: 2)!
+===================================================== */
+.global-wallpaper-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.global-wallpaper-image {
+  position: absolute;
+  inset: -24px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: filter 0.2s ease, background-image 0.25s ease;
+  will-change: filter;
+}
+
+.global-wallpaper-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--wallpaper-scrim-color);
+  transition: opacity 0.16s ease, background-color 0.2s ease;
+}
+
+/* Keep entire app shell cleanly ABOVE background effects (z-index: 2) */
+.app,
+.welcome-shell,
+.auth-shell {
+  position: relative;
+  z-index: 2;
+}
+
+/* Transparent canvas whenever Wallpaper, Liquid Glass, or Tet backdrop is active */
+:root[data-has-wallpaper="true"] body,
+:root[data-has-wallpaper="true"] #root,
+:root[data-has-wallpaper="true"] .app,
+:root[data-has-wallpaper="true"] .main,
+:root[data-has-wallpaper="true"] .welcome-shell,
+:root[data-has-wallpaper="true"] .auth-shell,
+:root[data-has-wallpaper="true"] .auth-form-panel,
+:root[data-theme="glass"] body,
+:root[data-theme="glass"] #root,
+:root[data-theme="glass"] .app,
+:root[data-theme="glass"] .main,
+:root[data-theme="glass"] .welcome-shell,
+:root[data-theme="glass"] .auth-shell,
+:root[data-theme="glass"] .auth-form-panel,
+:root[data-theme="tet"] body,
+:root[data-theme="tet"] #root,
+:root[data-theme="tet"] .app,
+:root[data-theme="tet"] .main,
+:root[data-theme="tet"] .welcome-shell,
+:root[data-theme="tet"] .auth-shell,
+:root[data-theme="tet"] .auth-form-panel {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* =====================================================
+   FROSTED / LIQUID GLASS SURFACES (ALL PAGES)
+===================================================== */
+:root[data-has-wallpaper="true"] .sidebar,
+:root[data-theme="tet"] .sidebar {
+  background: var(--bg-sidebar-glass) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+:root[data-has-wallpaper="true"] .app-top-header,
+:root[data-theme="tet"] .app-top-header {
+  background: var(--bg-sidebar-glass) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+:root[data-has-wallpaper="true"] .tech-panel,
+:root[data-has-wallpaper="true"] .settings-console-bar,
+:root[data-has-wallpaper="true"] .notif-console-header,
+:root[data-has-wallpaper="true"] .ai-header,
+:root[data-has-wallpaper="true"] .ai-container,
+:root[data-has-wallpaper="true"] .ai-rail-panel,
+:root[data-has-wallpaper="true"] .board-card,
+:root[data-has-wallpaper="true"] .bento-card,
+:root[data-has-wallpaper="true"] .kanban-board-topbar,
+:root[data-has-wallpaper="true"] .kanban-filter-bar,
+:root[data-has-wallpaper="true"] .task-card,
+:root[data-has-wallpaper="true"] .category-card,
+:root[data-has-wallpaper="true"] .calendar-section,
+:root[data-has-wallpaper="true"] .td-main-card,
+:root[data-has-wallpaper="true"] .td-side-card,
+:root[data-has-wallpaper="true"] .myday-section,
+:root[data-has-wallpaper="true"] .myday-stat-card,
+:root[data-has-wallpaper="true"] .myday-progress-pill,
+:root[data-has-wallpaper="true"] .tasks-filter-toolbar,
+:root[data-has-wallpaper="true"] .card,
+:root[data-has-wallpaper="true"] .stat-card,
+:root[data-has-wallpaper="true"] .empty,
+:root[data-theme="tet"] .tech-panel,
+:root[data-theme="tet"] .settings-console-bar,
+:root[data-theme="tet"] .notif-console-header,
+:root[data-theme="tet"] .ai-header,
+:root[data-theme="tet"] .ai-container,
+:root[data-theme="tet"] .ai-rail-panel,
+:root[data-theme="tet"] .board-card,
+:root[data-theme="tet"] .bento-card,
+:root[data-theme="tet"] .kanban-board-topbar,
+:root[data-theme="tet"] .kanban-filter-bar,
+:root[data-theme="tet"] .task-card,
+:root[data-theme="tet"] .category-card,
+:root[data-theme="tet"] .calendar-section,
+:root[data-theme="tet"] .td-main-card,
+:root[data-theme="tet"] .td-side-card,
+:root[data-theme="tet"] .myday-section,
+:root[data-theme="tet"] .myday-stat-card,
+:root[data-theme="tet"] .myday-progress-pill,
+:root[data-theme="tet"] .tasks-filter-toolbar,
+:root[data-theme="tet"] .card,
+:root[data-theme="tet"] .stat-card,
+:root[data-theme="tet"] .empty {
+  background: var(--bg-surface-glass) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+:root[data-has-wallpaper="true"] .kanban-column,
+:root[data-theme="tet"] .kanban-column {
+  background: var(--bg-column-glass) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* LIQUID GLASS — ULTRA-TRANSPARENT OPTICAL CRYSTAL SURFACES ON EVERY PAGE */
+:root[data-theme="glass"] .sidebar,
+:root[data-theme="glass"] .app-top-header,
+:root[data-theme="glass"] .welcome-nav,
+:root[data-theme="glass"] .welcome-footer {
+  background: var(--bg-sidebar-glass) !important;
+  backdrop-filter: blur(var(--glass-blur, 16px)) saturate(195%) brightness(1.06);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(195%) brightness(1.06);
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36), inset -1px 0 0 rgba(255, 255, 255, 0.12), var(--shadow-sm) !important;
+}
+
+:root[data-theme="glass"] .tech-panel,
+:root[data-theme="glass"] .settings-console-bar,
+:root[data-theme="glass"] .settings-nav-strip,
+:root[data-theme="glass"] .notif-console-header,
+:root[data-theme="glass"] .notif-item-card,
+:root[data-theme="glass"] .ai-header,
+:root[data-theme="glass"] .ai-container,
+:root[data-theme="glass"] .ai-rail-panel,
+:root[data-theme="glass"] .board-card,
+:root[data-theme="glass"] .bento-card,
+:root[data-theme="glass"] .bento-mini-card,
+:root[data-theme="glass"] .stats-audit-shell,
+:root[data-theme="glass"] .kanban-board-topbar,
+:root[data-theme="glass"] .kanban-filter-bar,
+:root[data-theme="glass"] .task-card,
+:root[data-theme="glass"] .category-card,
+:root[data-theme="glass"] .archive-card,
+:root[data-theme="glass"] .calendar-section,
+:root[data-theme="glass"] .td-main-card,
+:root[data-theme="glass"] .td-side-card,
+:root[data-theme="glass"] .myday-section,
+:root[data-theme="glass"] .myday-stat-card,
+:root[data-theme="glass"] .myday-progress-pill,
+:root[data-theme="glass"] .tasks-filter-toolbar,
+:root[data-theme="glass"] .card,
+:root[data-theme="glass"] .stat-card,
+:root[data-theme="glass"] .empty,
+:root[data-theme="glass"] .playground-frame,
+:root[data-theme="glass"] .collab-mockup,
+:root[data-theme="glass"] .insights-panel,
+:root[data-theme="glass"] .auth-card {
+  background: var(--bg-surface-glass) !important;
+  backdrop-filter: blur(var(--glass-blur, 16px)) saturate(195%) brightness(1.06);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(195%) brightness(1.06);
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    inset 1px 0 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 34px -10px rgba(0, 0, 0, 0.34) !important;
+}
+
+/* Ultra-sheer columns & inner cards so stacked layers never turn muddy */
+:root[data-theme="glass"] .kanban-column {
+  background: var(--bg-column-glass) !important;
+  backdrop-filter: blur(var(--glass-blur, 16px)) saturate(185%) brightness(1.04);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(185%) brightness(1.04);
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 10px 28px -10px rgba(0, 0, 0, 0.28) !important;
+}
+
+:root[data-theme="glass"] .kanban-card,
+:root[data-theme="glass"] .stats-audit-list-card,
+:root[data-theme="glass"] .stats-audit-detail-card,
+:root[data-theme="glass"] .task-audit-drawer,
+:root[data-theme="glass"] .theme-custom-box {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.03) 55%,
+    rgba(10, 18, 34, var(--glass-column-alpha, 0.087)) 100%
+  ) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 6px 18px -8px rgba(0, 0, 0, 0.24) !important;
+}
+
+:root[data-theme="glass"] .task-audit-cell,
+:root[data-theme="glass"] .stats-audit-item {
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* Modals & Popovers: luminous liquid crystal with crisp legibility */
+:root[data-theme="glass"] .team-modal,
+:root[data-theme="glass"] .theme-quick-popover,
+:root[data-theme="glass"] .modal-content,
+:root[data-theme="glass"] .modal-box,
+:root[data-theme="glass"] .confirm-modal,
+:root[data-theme="glass"] .global-search-dropdown {
+  background: var(--bg-modal-glass) !important;
+  backdrop-filter: blur(calc(var(--glass-blur, 16px) + 6px)) saturate(200%) brightness(1.06);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur, 16px) + 6px)) saturate(200%) brightness(1.06);
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.46),
+    inset 1px 0 0 rgba(255, 255, 255, 0.18),
+    0 20px 54px -12px rgba(0, 0, 0, 0.45) !important;
+}
+
+:root[data-theme="glass"] .tech-panel-head,
+:root[data-theme="glass"] .ai-chat-header,
+:root[data-theme="glass"] .ai-rail-head,
+:root[data-theme="glass"] .board-card-footer {
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* Subtle text contrast boost so crystal-clear glass stays crisp over any background */
+:root[data-theme="glass"] h1,
+:root[data-theme="glass"] h2,
+:root[data-theme="glass"] h3,
+:root[data-theme="glass"] .sidebar-item,
+:root[data-theme="glass"] .task-title {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.26);
+}
+
+:root[data-has-wallpaper="true"] .ai-messages,
+:root[data-theme="glass"] .ai-messages,
+:root[data-theme="tet"] .ai-messages {
+  background: transparent !important;
+}

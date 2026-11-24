@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="vi" data-theme="light" data-accent="blue">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sổ Việc Nhóm — Không gian Kanban cho đội nhóm</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("app-theme") || "light";
+          var a = localStorage.getItem("app-accent") || "blue";
+          var w = localStorage.getItem("app-wallpaper") || "";
+          if (t !== "dark" && t !== "light" && t !== "tet" && t !== "glass") t = "light";
+          document.documentElement.setAttribute("data-theme", t);
+          document.documentElement.setAttribute("data-accent", a);
+          document.documentElement.setAttribute("data-has-wallpaper", w ? "true" : "false");
+          if (t === "dark" || t === "tet" || t === "glass") {
+            document.documentElement.classList.add("dark-theme");
+          } else {
+            document.documentElement.classList.remove("dark-theme");
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

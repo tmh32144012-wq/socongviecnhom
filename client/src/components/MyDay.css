@@ -1,0 +1,321 @@
+﻿/* =====================================================
+   MY DAY — FLAT MODERN TECH SAAS STYLES
+===================================================== */
+
+.myday-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.myday-header-flat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.myday-day-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-color);
+  background: var(--accent-soft);
+  padding: 3px 9px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.myday-header-flat h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.myday-header-flat p {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.myday-progress-pill {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  box-shadow: var(--surface-highlight), var(--shadow-sm);
+}
+
+.myday-progress-ring-wrap {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.myday-progress-pct {
+  position: absolute;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.myday-progress-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.myday-progress-counts {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.myday-progress-counts strong {
+  color: var(--accent-color);
+  font-size: 18px;
+}
+
+/* STAT CARDS */
+.myday-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.myday-stat-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: var(--surface-highlight), var(--shadow-sm);
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.myday-stat-card:hover {
+  border-color: var(--accent-color);
+  transform: translateY(-2px);
+  box-shadow: var(--surface-highlight), var(--shadow-md);
+}
+
+.myday-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.myday-stat-label {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.myday-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+/* SECTIONS */
+.myday-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.myday-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--surface-highlight), var(--shadow-sm);
+}
+
+.myday-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.myday-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.myday-section-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.myday-section-title h3 {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.myday-section-count {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.myday-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.myday-task-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.myday-task-row:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.myday-task-row.done {
+  opacity: 0.68;
+}
+
+.myday-task-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.8px solid var(--border-strong);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.myday-task-check:hover {
+  border-color: var(--accent-color);
+}
+
+.myday-task-check.checked {
+  background: var(--success);
+  border-color: var(--success) !important;
+}
+
+.myday-task-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.myday-task-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.myday-task-title.done-text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.myday-task-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11.5px;
+}
+
+.myday-cat-tag {
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-weight: 600;
+}
+
+.myday-task-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.myday-task-progress {
+  color: var(--accent-color);
+  font-weight: 600;
+  background: var(--accent-soft);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.myday-task-open-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.myday-task-open-btn:hover {
+  background: var(--bg-surface);
+  color: var(--accent-color);
+}
+
+@media (max-width: 900px) {
+  .myday-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 540px) {
+  .myday-stats {
+    grid-template-columns: 1fr;
+  }
+}

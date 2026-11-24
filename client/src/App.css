@@ -1,0 +1,492 @@
+﻿@import './styles/base.css';
+@import './styles/animations.css';
+@import './styles/sidebar.css';
+@import './styles/dashboard.css';
+@import './styles/tasks.css';
+@import './styles/categories.css';
+@import './styles/settings.css';
+@import './styles/calendar.css';
+@import './styles/modals.css';
+@import './styles/responsive.css';
+
+/* =====================================================
+   GLOBAL TOP HEADER BAR — FLUSH ARCHITECTURAL WORKSPACE BAR
+===================================================== */
+.app-top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: var(--bg-surface-translucent, var(--bg-surface));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border-color);
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
+  padding: 11px 32px;
+  margin: 0 -32px 26px;
+  position: sticky;
+  top: 0;
+  z-index: 120;
+  transition: background-color var(--transition), border-color var(--transition);
+}
+
+.app-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  max-width: 500px;
+}
+
+.mobile-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.mobile-menu-btn:hover {
+  border-color: var(--accent-color);
+}
+
+/* Search Bar */
+.global-search-container {
+  position: relative;
+  width: 100%;
+}
+
+.global-search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.global-search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.global-search-bar input {
+  width: 100%;
+  padding: 8px 66px 8px 36px;
+  border-radius: 9px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  font-family: inherit;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.global-search-bar input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  background: var(--bg-surface);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.search-kbd {
+  position: absolute;
+  right: 10px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  box-shadow: 0 1px 0 var(--border-color);
+}
+
+.global-search-clear {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 3px;
+}
+
+/* Search Dropdown */
+.global-search-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.global-search-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  background: var(--bg-input);
+}
+
+.global-search-close {
+  background: transparent;
+  border: none;
+  color: var(--accent-color);
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.global-search-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.global-search-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background-color var(--transition-fast);
+}
+
+.global-search-item:last-child {
+  border-bottom: none;
+}
+
+.global-search-item:hover {
+  background: var(--bg-hover);
+}
+
+.global-search-item-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--text-primary);
+}
+
+.global-search-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.search-status-tag {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  font-weight: 500;
+}
+
+.global-search-empty {
+  padding: 22px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Header Right Area */
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-header-quick-add {
+  padding: 7px 14px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  white-space: nowrap !important;
+}
+
+.app-header-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.app-header-icon-btn:hover {
+  border-color: var(--accent-color);
+  background: var(--bg-hover);
+}
+
+.notif-bell .notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  line-height: 1.2;
+}
+
+.app-header-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px 3px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.app-header-user:hover {
+  border-color: var(--accent-color);
+}
+
+.app-header-username {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =====================================================
+   THEME QUICK POPOVER MENU IN HEADER
+===================================================== */
+.theme-quick-wrap {
+  position: relative;
+}
+
+.theme-quick-trigger {
+  height: 36px;
+  padding: 0 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.theme-quick-trigger:hover {
+  border-color: var(--accent-color);
+}
+
+.theme-quick-trigger.is-tet {
+  border-color: rgba(251, 146, 60, 0.38);
+  color: #FFF7ED;
+}
+
+.theme-quick-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.theme-quick-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 14px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: dropdownSlide 0.14s ease forwards;
+}
+
+.theme-quick-section {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.theme-quick-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.theme-quick-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.theme-mode-pill {
+  width: 100%;
+  padding: 8px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.14s ease, background-color 0.14s ease;
+}
+
+.theme-mode-pill:hover {
+  border-color: var(--border-strong);
+}
+
+.theme-mode-pill.active {
+  border-color: var(--accent-color);
+  background: var(--accent-soft);
+  color: var(--accent-color);
+}
+
+.theme-mode-pill.tet-pill.active {
+  border-color: #F97316;
+  background: rgba(249, 115, 22, 0.16);
+  color: #FB923C;
+}
+
+.theme-quick-divider {
+  height: 1px;
+  background: var(--border-color);
+}
+
+.theme-accent-dots {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.accent-dot-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.accent-dot-btn:hover {
+  transform: scale(1.08);
+}
+
+.accent-dot-btn.selected {
+  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--text-primary);
+}
+
+.theme-quick-tet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* =====================================================
+   RESPONSIVE TOP HEADER
+===================================================== */
+@media (max-width: 900px) {
+  .app-top-header {
+    padding: 10px 16px;
+    margin: -20px -16px 20px;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .app-header-username,
+  .theme-quick-label {
+    display: none;
+  }
+
+  .app-header-user {
+    padding: 3px;
+  }
+}
+
+@media (max-width: 600px) {
+  .app-top-header {
+    padding: 9px 14px;
+    margin: -20px -16px 16px;
+    top: 0;
+  }
+
+  .app-header-quick-add {
+    display: none !important;
+  }
+
+  .global-search-bar input {
+    font-size: 12.5px;
+    padding: 7px 30px 7px 32px;
+  }
+}

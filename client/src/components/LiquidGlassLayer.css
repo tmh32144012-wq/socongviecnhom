@@ -1,0 +1,190 @@
+/* =====================================================
+   LIQUID GLASS BACKDROP — FLUID REFRACTIVE AMBIENCE
+   Strictly behind all UI (z-index: 0, pointer-events: none)
+===================================================== */
+
+.liquid-glass-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: linear-gradient(140deg, #07101f 0%, #0d1f36 52%, #0a1628 100%);
+}
+
+.liquid-glass-backdrop.has-wallpaper {
+  background: transparent;
+}
+
+.liquid-glass-backdrop.tone-crystal {
+  background: linear-gradient(140deg, #0d0f24 0%, #1a1b3e 50%, #0e1d36 100%);
+}
+
+.liquid-glass-backdrop.tone-emerald {
+  background: linear-gradient(140deg, #06181a 0%, #0c2c30 50%, #081b26 100%);
+}
+
+.liquid-glass-backdrop.tone-sunset {
+  background: linear-gradient(140deg, #1b0f1b 0%, #2e1722 50%, #171022 100%);
+}
+
+.liquid-glass-backdrop.has-wallpaper.tone-crystal,
+.liquid-glass-backdrop.has-wallpaper.tone-emerald,
+.liquid-glass-backdrop.has-wallpaper.tone-sunset {
+  background: transparent;
+}
+
+.liquid-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  opacity: 0.72;
+  will-change: transform;
+}
+
+.liquid-glass-backdrop.has-wallpaper .liquid-orb {
+  opacity: 0.22;
+}
+
+.liquid-glass-backdrop.tone-ocean .orb-1 {
+  width: 580px;
+  height: 580px;
+  top: -120px;
+  left: 10%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.68) 0%, rgba(14, 165, 233, 0.24) 42%, transparent 72%);
+}
+
+.liquid-glass-backdrop.tone-ocean .orb-2 {
+  width: 640px;
+  height: 640px;
+  bottom: -160px;
+  right: 6%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.64) 0%, rgba(37, 99, 235, 0.22) 44%, transparent 72%);
+}
+
+.liquid-glass-backdrop.tone-ocean .orb-3 {
+  width: 480px;
+  height: 480px;
+  top: 32%;
+  left: 46%;
+  background: radial-gradient(circle, rgba(125, 211, 252, 0.46) 0%, transparent 72%);
+}
+
+.liquid-glass-backdrop.tone-crystal .orb-1 {
+  width: 540px;
+  height: 540px;
+  top: -140px;
+  left: 14%;
+  background: radial-gradient(circle, rgba(129, 140, 248, 0.52) 0%, transparent 70%);
+}
+
+.liquid-glass-backdrop.tone-crystal .orb-2 {
+  width: 580px;
+  height: 580px;
+  bottom: -160px;
+  right: 10%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.44) 0%, transparent 70%);
+}
+
+.liquid-glass-backdrop.tone-crystal .orb-3 {
+  width: 420px;
+  height: 420px;
+  top: 38%;
+  left: 48%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.32) 0%, transparent 72%);
+}
+
+.liquid-glass-backdrop.tone-emerald .orb-1 {
+  width: 540px;
+  height: 540px;
+  top: -130px;
+  left: 14%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.48) 0%, transparent 70%);
+}
+
+.liquid-glass-backdrop.tone-emerald .orb-2 {
+  width: 580px;
+  height: 580px;
+  bottom: -160px;
+  right: 10%;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.44) 0%, transparent 70%);
+}
+
+.liquid-glass-backdrop.tone-emerald .orb-3 {
+  width: 420px;
+  height: 420px;
+  top: 38%;
+  left: 50%;
+  background: radial-gradient(circle, rgba(45, 212, 191, 0.34) 0%, transparent 72%);
+}
+
+.liquid-glass-backdrop.tone-sunset .orb-1 {
+  width: 540px;
+  height: 540px;
+  top: -130px;
+  left: 14%;
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.46) 0%, transparent 70%);
+}
+
+.liquid-glass-backdrop.tone-sunset .orb-2 {
+  width: 580px;
+  height: 580px;
+  bottom: -160px;
+  right: 10%;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.38) 0%, transparent 70%);
+}
+
+.liquid-glass-backdrop.tone-sunset .orb-3 {
+  width: 420px;
+  height: 420px;
+  top: 40%;
+  left: 50%;
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.32) 0%, transparent 72%);
+}
+
+.liquid-glass-backdrop.is-animated .orb-1 {
+  animation: liquidFloat1 18s ease-in-out infinite alternate;
+}
+
+.liquid-glass-backdrop.is-animated .orb-2 {
+  animation: liquidFloat2 22s ease-in-out infinite alternate;
+}
+
+.liquid-glass-backdrop.is-animated .orb-3 {
+  animation: liquidFloat3 16s ease-in-out infinite alternate;
+}
+
+.liquid-caustic-sheen {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      125deg,
+      rgba(255, 255, 255, 0.09) 0%,
+      transparent 34%,
+      rgba(186, 230, 253, 0.07) 58%,
+      transparent 82%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+}
+
+@keyframes liquidFloat1 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(80px, 55px, 0) scale(1.12); }
+}
+
+@keyframes liquidFloat2 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(-90px, -65px, 0) scale(1.1); }
+}
+
+@keyframes liquidFloat3 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(-50px, 60px, 0) scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liquid-orb {
+    animation: none !important;
+  }
+}
