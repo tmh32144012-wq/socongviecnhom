@@ -21,8 +21,13 @@ export const API_ENDPOINTS = {
   register: `${API_BASE}/register`,
   captcha: `${API_BASE}/captcha`,
   forgotPassword: `${API_BASE}/forgot-password`,
+  verifyResetOtp: `${API_BASE}/verify-reset-otp`,
   resetPassword: `${API_BASE}/reset-password`,
   logoutAll: `${API_BASE}/logout-all`,
+  oauthProviders: `${API_BASE}/auth/oauth/providers`,
+  oauthGoogle: `${API_BASE}/auth/google`,
+  oauthFacebook: `${API_BASE}/auth/facebook`,
+  oauthExchange: `${API_BASE}/auth/oauth/exchange`,
   me: `${API_BASE}/me`,
   profile: `${API_BASE}/profile`,
   changePassword: `${API_BASE}/change-password`,
@@ -86,10 +91,13 @@ export const API_ENDPOINTS = {
   aiStatus: `${API_BASE}/ai/status`,
   aiChat: `${API_BASE}/ai/chat`,
   aiConfig: `${API_BASE}/ai/config`,
+  aiSessions: `${API_BASE}/ai/sessions`,
+  aiSessionById: (id) => `${API_BASE}/ai/sessions/${id}`,
 
   // Attachments
   taskAttachments: (taskId) => `${API_BASE}/tasks/${taskId}/attachments`,
   attachmentDownload: (id) => `${API_BASE}/attachments/${id}/download`,
+  attachmentPreview: (id) => `${API_BASE}/attachments/${id}/preview`,
   attachmentDelete: (id) => `${API_BASE}/attachments/${id}`,
 };
 

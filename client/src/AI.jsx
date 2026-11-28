@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Bot,
   Settings2,
@@ -20,20 +20,52 @@ import {
   TrendingUp,
   ClipboardList,
   Gauge,
+  Plus,
+  Trash2,
+  History,
 } from "lucide-react";
 import "./AI.css";
 import { API_ENDPOINTS, getAuthHeaders } from "./config/api";
 
-function AI({ tasks = [], categories: _categories = [] }) {
+const WELCOME_MESSAGE = {
+  role: "ai",
+  content:
+    "Xin chào! Tôi là trợ lý AI của KanoFlow. Tôi có thể giúp bạn phân tích công việc, đánh giá rủi ro trễ hạn, ưu tiên nhiệm vụ và lên kế hoạch làm việc hiệu quả.",
+  source: "system",
+};
+
+function normalizeSessionMessages(rawList) {
+  if (!Array.isArray(rawList) || rawList.length === 0) {
+    return [WELCOME_MESSAGE];
+  }
+  return rawList.map((m) => ({
+    role: m.role === "user" ? "user" : "ai",
+    content: m.content || "",
+    source: m.source || (m.role === "user" ? undefined : "local"),
+    timestamp: m.timestamp,
+  }));
+}
+
+function formatSessionTime(iso) {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
+function AI({ currentUser = null, tasks = [], categories: _categories = [] }) {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      role: "ai",
-      content:
-        "Xin chào! Tôi là trợ lý AI của Task Manager. Tôi có thể giúp bạn phân tích công việc, đánh giá rủi ro trễ hạn, ưu tiên nhiệm vụ và lên kế hoạch làm việc hiệu quả.",
-      source: "system",
-    },
-  ]);
+  const [messages, setMessages] = useState([WELCOME_MESSAGE]);
+  const [sessions, setSessions] = useState([]);
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
   const [isTyping, setIsTyping] = useState(false);
   const [aiStatus, setAiStatus] = useState({
@@ -83,9 +115,108 @@ function AI({ tasks = [], categories: _categories = [] }) {
     }
   };
 
+  const sessionStorageKey = `kanoflow_ai_active_session_${currentUser?.id || "anon"}`;
+
+  // Tải 3 đoạn trò chuyện gần nhất của đúng tài khoản đang đăng nhập
+  const loadSessions = useCallback(async () => {
+    setLoadingSessions(true);
+    try {
+      const res = await fetch(API_ENDPOINTS.aiSessions, {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = Array.isArray(data.sessions) ? data.sessions : [];
+      setSessions(list);
+
+      if (list.length > 0) {
+        const savedId = Number(localStorage.getItem(sessionStorageKey));
+        const matched = list.find((s) => Number(s.id) === savedId) || list[0];
+        setActiveSessionId(matched.id);
+        setMessages(normalizeSessionMessages(matched.messages));
+        localStorage.setItem(sessionStorageKey, String(matched.id));
+      } else {
+        setActiveSessionId(null);
+        setMessages([WELCOME_MESSAGE]);
+      }
+    } catch {
+      // Giữ trạng thái hiện tại nếu mạng tạm lỗi
+    } finally {
+      setLoadingSessions(false);
+    }
+  }, [sessionStorageKey]);
+
   useEffect(() => {
     checkAiStatus();
   }, []);
+
+  // Khi chuyển tài khoản hoặc quay lại tab Trợ lý ảo -> tải đúng lịch sử tài khoản đó
+  useEffect(() => {
+    setSessions([]);
+    setActiveSessionId(null);
+    setMessages([WELCOME_MESSAGE]);
+    loadSessions();
+  }, [currentUser?.id, loadSessions]);
+
+  const handleSelectSession = (sess) => {
+    if (!sess || isTyping) return;
+    setActiveSessionId(sess.id);
+    setMessages(normalizeSessionMessages(sess.messages));
+    localStorage.setItem(sessionStorageKey, String(sess.id));
+  };
+
+  const handleNewSession = async () => {
+    if (isTyping) return;
+    try {
+      const res = await fetch(API_ENDPOINTS.aiSessions, {
+        method: "POST",
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ title: "Cuộc trò chuyện mới" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const nextSessions = Array.isArray(data.sessions) ? data.sessions : [];
+        setSessions(nextSessions);
+        if (data.session) {
+          setActiveSessionId(data.session.id);
+          localStorage.setItem(sessionStorageKey, String(data.session.id));
+        }
+        setMessages([WELCOME_MESSAGE]);
+      }
+    } catch {
+      setActiveSessionId(null);
+      setMessages([WELCOME_MESSAGE]);
+    }
+  };
+
+  const handleDeleteSession = async (e, id) => {
+    e.stopPropagation();
+    if (isTyping) return;
+    try {
+      const res = await fetch(API_ENDPOINTS.aiSessionById(id), {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const nextSessions = Array.isArray(data.sessions) ? data.sessions : [];
+      setSessions(nextSessions);
+
+      if (Number(activeSessionId) === Number(id)) {
+        if (nextSessions.length > 0) {
+          setActiveSessionId(nextSessions[0].id);
+          setMessages(normalizeSessionMessages(nextSessions[0].messages));
+          localStorage.setItem(sessionStorageKey, String(nextSessions[0].id));
+        } else {
+          setActiveSessionId(null);
+          setMessages([WELCOME_MESSAGE]);
+          localStorage.removeItem(sessionStorageKey);
+        }
+      }
+    } catch {
+      // Ignore transient failure
+    }
+  };
 
   const handleSaveConfig = async (e) => {
     e.preventDefault();
@@ -486,19 +617,29 @@ Hãy thử hỏi: *"Lập kế hoạch chi tiết cho đồ án"* hoặc *"Tôi 
         body: JSON.stringify({
           message: userMessage,
           history: historyPayload,
+          sessionId: activeSessionId,
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "ai",
-            content: data.reply || "Không có phản hồi.",
-            source: data.source || "ai",
-          },
-        ]);
+        if (Array.isArray(data.sessions)) {
+          setSessions(data.sessions);
+        }
+        if (data.session) {
+          setActiveSessionId(data.session.id);
+          localStorage.setItem(sessionStorageKey, String(data.session.id));
+          setMessages(normalizeSessionMessages(data.session.messages));
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "ai",
+              content: data.reply || "Không có phản hồi.",
+              source: data.source || "ai",
+            },
+          ]);
+        }
       } else {
         const fallback = generateClientFallbackResponse(userMessage);
         setMessages((prev) => [
@@ -717,9 +858,21 @@ Hãy thử hỏi: *"Lập kế hoạch chi tiết cho đồ án"* hoặc *"Tôi 
               <p>Kết nối trực tiếp dữ liệu {totalTaskCount} công việc hiện tại</p>
             </div>
 
-            <div className="ai-status">
-              <span className="ai-status-dot"></span>
-              {aiStatus.configured ? "Cloud Online" : "Sẵn sàng"}
+            <div className="ai-chat-header-actions">
+              <button
+                type="button"
+                className="ai-new-chat-btn"
+                onClick={handleNewSession}
+                disabled={isTyping}
+                title="Bắt đầu cuộc trò chuyện mới (hệ thống tự giữ 3 đoạn gần nhất)"
+              >
+                <Plus size={14} strokeWidth={2} />
+                <span>Đoạn chat mới</span>
+              </button>
+              <div className="ai-status">
+                <span className="ai-status-dot"></span>
+                {aiStatus.configured ? "Cloud Online" : "Sẵn sàng"}
+              </div>
             </div>
           </div>
 
@@ -787,8 +940,78 @@ Hãy thử hỏi: *"Lập kế hoạch chi tiết cho đồ án"* hoặc *"Tôi 
           </form>
         </div>
 
-        {/* RIGHT PANE: LIVE WORKSPACE CONTEXT + QUICK PROMPTS */}
+        {/* RIGHT PANE: 3 RECENT SESSIONS + LIVE WORKSPACE CONTEXT + QUICK PROMPTS */}
         <aside className="ai-rail">
+          {/* 3 RECENT CONVERSATIONS PER ACCOUNT */}
+          <div className="ai-rail-panel ai-history-panel">
+            <div className="ai-rail-head">
+              <div className="ai-quick-title-left">
+                <History size={14} strokeWidth={1.85} className="ai-quick-title-icon" />
+                <span>3 đoạn chat gần nhất</span>
+              </div>
+              <button
+                type="button"
+                className="ai-history-add-btn"
+                onClick={handleNewSession}
+                disabled={isTyping}
+                title="Tạo cuộc trò chuyện mới"
+              >
+                <Plus size={13} strokeWidth={2} />
+                <span>Mới</span>
+              </button>
+            </div>
+            <div className="ai-history-owner">
+              Lưu riêng cho tài khoản: <strong>{currentUser?.name || "Hiện tại"}</strong> ({sessions.length}/3)
+            </div>
+            <div className="ai-history-list">
+              {loadingSessions ? (
+                <div className="ai-history-empty">Đang khôi phục lịch sử chat...</div>
+              ) : sessions.length === 0 ? (
+                <div className="ai-history-empty">
+                  Chưa có đoạn chat nào được lưu. Hãy gửi câu hỏi đầu tiên — lịch sử sẽ tự động giữ 3 đoạn gần nhất!
+                </div>
+              ) : (
+                sessions.map((sess) => {
+                  const isActive = Number(sess.id) === Number(activeSessionId);
+                  const msgCount = Array.isArray(sess.messages) ? sess.messages.length : 0;
+                  return (
+                    <div
+                      key={sess.id}
+                      role="button"
+                      tabIndex={0}
+                      className={`ai-history-item ${isActive ? "active" : ""}`}
+                      onClick={() => handleSelectSession(sess)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleSelectSession(sess);
+                        }
+                      }}
+                    >
+                      <div className="ai-history-item-main">
+                        <div className="ai-history-item-title">{sess.title || "Cuộc trò chuyện mới"}</div>
+                        <div className="ai-history-item-meta">
+                          <span>{msgCount} tin nhắn</span>
+                          <span>•</span>
+                          <span>{formatSessionTime(sess.updatedAt)}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="ai-history-del-btn"
+                        onClick={(e) => handleDeleteSession(e, sess.id)}
+                        title="Xóa đoạn chat này"
+                        aria-label="Xóa đoạn chat này"
+                      >
+                        <Trash2 size={13} strokeWidth={1.8} />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
           {/* LIVE CONTEXT READOUT */}
           <div className="ai-rail-panel">
             <div className="ai-rail-head">

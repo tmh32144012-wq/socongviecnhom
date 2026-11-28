@@ -1,6 +1,8 @@
 const express = require("express");
 const {
   ActivityLog,
+  Board,
+  BoardColumn,
   BoardLabel,
   TaskLabel,
   BoardMessage,
@@ -15,6 +17,11 @@ const { canAccessBoard, canAccessTask, isBoardAdmin } = require("../utils/boardA
 const { emitBoardEvent, emitUserEvent } = require("../socket");
 const { logActivity } = require("../utils/activityLogger");
 const { hydrateSingleTask } = require("../utils/taskHydrator");
+const {
+  AI_BOT_AUTHOR,
+  hasAiMention,
+  generateBoardAiReply,
+} = require("../utils/aiAssistant");
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -263,14 +270,21 @@ router.get("/boards/:boardId/messages", async (req, res) => {
     });
 
     const ordered = rows.reverse();
-    const userIds = [...new Set(ordered.map((m) => m.userId))];
+    const userIds = [...new Set(ordered.filter((m) => !m.isAi).map((m) => m.userId))];
     const users = userIds.length
       ? await User.findAll({ where: { id: { [Op.in]: userIds } }, attributes: ["id", "name", "email", "avatar"] })
       : [];
     const userMap = new Map(users.map((u) => [u.id, u.toJSON()]));
 
     res.json({
-      messages: ordered.map((m) => ({ ...m.toJSON(), author: userMap.get(m.userId) || null })),
+      messages: ordered.map((m) => {
+        const plain = m.toJSON();
+        return {
+          ...plain,
+          isAi: Boolean(plain.isAi),
+          author: plain.isAi ? AI_BOT_AUTHOR : userMap.get(m.userId) || null,
+        };
+      }),
     });
   } catch (error) {
     console.error("Lỗi tải tin nhắn bảng:", error);
@@ -289,15 +303,17 @@ router.post("/boards/:boardId/messages", async (req, res) => {
       return res.status(400).json({ message: "Nội dung tin nhắn không được để trống!" });
     }
 
+    const trimmedContent = String(content).trim().slice(0, 2000);
     const msg = await BoardMessage.create({
       boardId,
       userId: req.user.id,
-      content: String(content).trim().slice(0, 2000),
+      content: trimmedContent,
+      isAi: false,
       createdAt: new Date(),
     });
 
     const author = await User.findByPk(req.user.id, { attributes: ["id", "name", "email", "avatar"] });
-    const hydrated = { ...msg.toJSON(), author: author ? author.toJSON() : null };
+    const hydrated = { ...msg.toJSON(), isAi: false, author: author ? author.toJSON() : null };
 
     emitBoardEvent(boardId, "board:message-new", { boardId, message: hydrated });
 
@@ -316,7 +332,63 @@ router.post("/boards/:boardId/messages", async (req, res) => {
       emitUserEvent(target.id, "notification:new", { notification: notif.toJSON() });
     }
 
-    res.status(201).json({ message: hydrated });
+    // Nếu tin nhắn có gọi @troliao -> AI phân tích ngữ cảnh toàn bộ bảng dự án và trả lời chung cho mọi thành viên
+    let hydratedAi = null;
+    if (hasAiMention(trimmedContent)) {
+      try {
+        const [board, columns, tasks, memberships, recentRows] = await Promise.all([
+          Board.findByPk(boardId),
+          BoardColumn.findAll({ where: { boardId }, order: [["position", "ASC"], ["id", "ASC"]] }),
+          Task.findAll({ where: { boardId, isArchived: false } }),
+          BoardMember.findAll({ where: { boardId, status: "accepted" } }),
+          BoardMessage.findAll({ where: { boardId }, order: [["createdAt", "DESC"]], limit: 8 }),
+        ]);
+
+        const memberIds = memberships.map((m) => m.userId);
+        const memberUsers = memberIds.length
+          ? await User.findAll({ where: { id: { [Op.in]: memberIds } }, attributes: ["id", "name"] })
+          : [];
+        const userNameMap = new Map(memberUsers.map((u) => [u.id, u.name]));
+        const members = memberships.map((m) => ({
+          id: m.userId,
+          role: m.role,
+          name: userNameMap.get(m.userId) || "Thành viên",
+        }));
+
+        const recentMessages = recentRows.reverse().map((r) => ({
+          authorName: r.isAi ? AI_BOT_AUTHOR.name : userNameMap.get(r.userId) || "Thành viên",
+          content: r.content,
+        }));
+
+        const aiReplyText = await generateBoardAiReply({
+          board: board || { id: boardId, name: "Dự án nhóm", description: "" },
+          columns,
+          tasks,
+          members,
+          recentMessages,
+          prompt: trimmedContent,
+          requesterName: author?.name || req.user.name,
+        });
+
+        const aiMsg = await BoardMessage.create({
+          boardId,
+          userId: req.user.id,
+          content: aiReplyText.slice(0, 2000),
+          isAi: true,
+          createdAt: new Date(Date.now() + 50),
+        });
+
+        hydratedAi = { ...aiMsg.toJSON(), isAi: true, author: AI_BOT_AUTHOR };
+        emitBoardEvent(boardId, "board:message-new", { boardId, message: hydratedAi });
+      } catch (aiErr) {
+        console.error("Lỗi tạo phản hồi @troliao trong phòng chat nhóm:", aiErr);
+      }
+    }
+
+    res.status(201).json({
+      message: hydrated,
+      ...(hydratedAi ? { aiMessage: hydratedAi } : {}),
+    });
   } catch (error) {
     console.error("Lỗi gửi tin nhắn bảng:", error);
     res.status(500).json({ message: "Không thể gửi tin nhắn!" });

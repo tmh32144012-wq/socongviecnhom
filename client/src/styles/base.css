@@ -42,6 +42,48 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-width: thin;
+}
+
+/* Sleek themed thin scrollbars across Kanban, Sidebar & Modals */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.16s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Balanced headings (prevents awkward orphan words) */
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+/* Accessible keyboard focus ring (WCAG 2.2 compliant) */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
 }
 
 body {
@@ -70,6 +112,55 @@ a {
 
 img {
   max-width: 100%;
+}
+
+/* =====================================================
+   ACCESSIBILITY SKIP LINK & LAZY PAGE LOADER
+===================================================== */
+.skip-to-content {
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  z-index: 2000;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--accent-color);
+  color: var(--accent-fg);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: var(--shadow-md);
+  transition: top 0.16s ease;
+}
+
+.skip-to-content:focus {
+  top: 14px;
+}
+
+.page-lazy-loader {
+  min-height: 46vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.page-lazy-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2.5px solid var(--border-color);
+  border-top-color: var(--accent-color);
+  animation: pageLazySpin 0.7s linear infinite;
+}
+
+@keyframes pageLazySpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* =====================================================
@@ -155,23 +246,37 @@ img {
   font-weight: 600;
   font-size: 13.5px;
   cursor: pointer;
-  transition: background-color var(--transition), border-color var(--transition), color var(--transition), transform var(--transition-fast);
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.14s cubic-bezier(0.22, 1, 0.36, 1);
   white-space: nowrap;
 }
 
-.btn:active {
-  transform: scale(0.98);
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
 }
 
 .btn-primary {
-  background: var(--accent-color);
+  background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
   color: var(--accent-fg);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 8px -2px var(--accent-ring);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26), 0 4px 12px -3px var(--accent-ring);
 }
 
-.btn-primary:hover {
-  background: var(--accent-hover);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 8px 20px -4px var(--accent-ring);
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 10px 22px -5px var(--accent-ring);
 }
 
 .btn-secondary {
@@ -497,6 +602,78 @@ img {
 
 .toast {
   animation: toastSlideIn 0.2s ease forwards;
+}
+
+/* Global viewport-centered modal overlay (never trapped at bottom of page) */
+.team-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(6, 10, 20, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.team-modal {
+  width: 100%;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--ui-radius, 12px);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+}
+
+.team-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.team-modal-header h2 {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 700;
+}
+
+.team-modal-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.team-modal-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.team-modal-body {
+  padding: 18px 20px;
+}
+
+.team-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-color);
 }
 
 @media (prefers-reduced-motion: reduce) {

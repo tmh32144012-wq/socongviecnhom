@@ -3,6 +3,7 @@ const {
   Task,
   TaskComment,
   TaskAssignee,
+  TaskProgressStep,
   Notification,
   User,
   Op,
@@ -12,16 +13,30 @@ const { canAccessTask, isBoardAdmin } = require("../utils/boardAccess");
 const { emitBoardEvent, emitUserEvent } = require("../socket");
 const { logActivity } = require("../utils/activityLogger");
 const { findMentionedBoardMembers } = require("./collaboration");
+const {
+  AI_BOT_AUTHOR,
+  hasAiMention,
+  generateTaskAiReply,
+} = require("../utils/aiAssistant");
 
 const router = express.Router();
 router.use(authenticateToken);
 
 async function hydrateComment(comment) {
+  const plain = comment.toJSON();
+  if (plain.isAi) {
+    return {
+      ...plain,
+      isAi: true,
+      author: AI_BOT_AUTHOR,
+    };
+  }
   const author = await User.findByPk(comment.userId, {
     attributes: ["id", "name", "email", "avatar"],
   });
   return {
-    ...comment.toJSON(),
+    ...plain,
+    isAi: false,
     author: author ? author.toJSON() : null,
   };
 }
@@ -47,7 +62,7 @@ router.get("/tasks/:taskId/comments", async (req, res) => {
       order: [["createdAt", "ASC"]],
     });
 
-    const userIds = [...new Set(comments.map((c) => c.userId))];
+    const userIds = [...new Set(comments.filter((c) => !c.isAi).map((c) => c.userId))];
     const users = userIds.length
       ? await User.findAll({
           where: { id: { [Op.in]: userIds } },
@@ -56,10 +71,14 @@ router.get("/tasks/:taskId/comments", async (req, res) => {
       : [];
     const userMap = new Map(users.map((u) => [u.id, u.toJSON()]));
 
-    const result = comments.map((c) => ({
-      ...c.toJSON(),
-      author: userMap.get(c.userId) || null,
-    }));
+    const result = comments.map((c) => {
+      const plain = c.toJSON();
+      return {
+        ...plain,
+        isAi: Boolean(plain.isAi),
+        author: plain.isAi ? AI_BOT_AUTHOR : userMap.get(c.userId) || null,
+      };
+    });
 
     res.json({ comments: result });
   } catch (error) {
@@ -69,7 +88,7 @@ router.get("/tasks/:taskId/comments", async (req, res) => {
 });
 
 // ==================================================
-// 2. POST /api/tasks/:taskId/comments — Thêm bình luận mới
+// 2. POST /api/tasks/:taskId/comments — Thêm bình luận mới (hỗ trợ @troliao AI dùng chung)
 // ==================================================
 router.post("/tasks/:taskId/comments", async (req, res) => {
   try {
@@ -90,10 +109,12 @@ router.post("/tasks/:taskId/comments", async (req, res) => {
       return res.status(403).json({ message: "Bạn không có quyền bình luận trên công việc này!" });
     }
 
+    const trimmedContent = content.trim();
     const comment = await TaskComment.create({
       taskId,
       userId: req.user.id,
-      content: content.trim(),
+      content: trimmedContent,
+      isAi: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -102,19 +123,20 @@ router.post("/tasks/:taskId/comments", async (req, res) => {
 
     // Tạo thông báo cho người tạo task và các thành viên được gán (trừ người vừa bình luận)
     const assignees = await TaskAssignee.findAll({ where: { taskId }, attributes: ["userId"] });
-    const recipientIds = new Set([
+    const allParticipantIds = new Set([
       task.userId,
       ...assignees.map((a) => a.userId),
     ]);
+    const recipientIds = new Set(allParticipantIds);
     recipientIds.delete(req.user.id);
 
-    const preview = content.trim().length > 80
-      ? content.trim().slice(0, 80) + "..."
-      : content.trim();
+    const preview = trimmedContent.length > 80
+      ? trimmedContent.slice(0, 80) + "..."
+      : trimmedContent;
 
     // Nhận diện @mention thành viên trong bảng để gửi thông báo ưu tiên
     const mentionedUsers = task.boardId
-      ? await findMentionedBoardMembers(task.boardId, content.trim(), req.user.id)
+      ? await findMentionedBoardMembers(task.boardId, trimmedContent, req.user.id)
       : [];
     const mentionedIds = new Set(mentionedUsers.map((u) => u.id));
 
@@ -160,10 +182,114 @@ router.post("/tasks/:taskId/comments", async (req, res) => {
         comment: hydrated,
       });
     }
+    for (const participantId of allParticipantIds) {
+      emitUserEvent(participantId, "comment:created", {
+        boardId: task.boardId || null,
+        taskId,
+        comment: hydrated,
+      });
+    }
+
+    // Nếu bình luận có nhắc @troliao -> AI phân tích ngữ cảnh công việc và phản hồi chung cho cả nhóm
+    let hydratedAi = null;
+    if (hasAiMention(trimmedContent)) {
+      try {
+        const steps = await TaskProgressStep.findAll({
+          where: { taskId },
+          order: [["stepOrder", "ASC"], ["id", "ASC"]],
+        });
+        const assigneeUserIds = assignees.map((a) => a.userId);
+        const assigneeUsers = assigneeUserIds.length
+          ? await User.findAll({
+              where: { id: { [Op.in]: assigneeUserIds } },
+              attributes: ["id", "name"],
+            })
+          : [];
+        const recentRows = await TaskComment.findAll({
+          where: { taskId },
+          order: [["createdAt", "DESC"]],
+          limit: 6,
+        });
+        const recentAuthorIds = [...new Set(recentRows.filter((r) => !r.isAi).map((r) => r.userId))];
+        const recentAuthors = recentAuthorIds.length
+          ? await User.findAll({
+              where: { id: { [Op.in]: recentAuthorIds } },
+              attributes: ["id", "name"],
+            })
+          : [];
+        const recentAuthorMap = new Map(recentAuthors.map((u) => [u.id, u.name]));
+        const recentComments = recentRows.reverse().map((r) => ({
+          authorName: r.isAi ? AI_BOT_AUTHOR.name : recentAuthorMap.get(r.userId) || "Thành viên",
+          content: r.content,
+        }));
+
+        const aiReplyText = await generateTaskAiReply({
+          task,
+          steps,
+          assignees: assigneeUsers,
+          recentComments,
+          prompt: trimmedContent,
+          requesterName: hydrated.author?.name || req.user.name,
+        });
+
+        const aiComment = await TaskComment.create({
+          taskId,
+          userId: req.user.id,
+          content: aiReplyText,
+          isAi: true,
+          createdAt: new Date(Date.now() + 50),
+          updatedAt: new Date(Date.now() + 50),
+        });
+
+        hydratedAi = await hydrateComment(aiComment);
+
+        if (task.boardId) {
+          emitBoardEvent(task.boardId, "comment:created", {
+            boardId: task.boardId,
+            taskId,
+            comment: hydratedAi,
+          });
+        }
+        for (const participantId of allParticipantIds) {
+          emitUserEvent(participantId, "comment:created", {
+            boardId: task.boardId || null,
+            taskId,
+            comment: hydratedAi,
+          });
+        }
+
+        const aiPreview = aiReplyText.length > 90 ? aiReplyText.slice(0, 90) + "..." : aiReplyText;
+        const notifyAiIds = new Set([...allParticipantIds, ...mentionedIds]);
+        notifyAiIds.delete(req.user.id);
+        for (const uid of notifyAiIds) {
+          const aiNotif = await Notification.create({
+            userId: uid,
+            taskId: task.id,
+            title: `Trợ lý ảo đã phản hồi @troliao trong "${task.title}"`,
+            message: aiPreview,
+            type: "comment",
+            isRead: false,
+            createdAt: new Date(),
+          });
+          emitUserEvent(uid, "notification:new", { notification: aiNotif.toJSON() });
+        }
+
+        await logActivity({
+          boardId: task.boardId,
+          taskId: task.id,
+          userId: req.user.id,
+          action: "comment:ai-reply",
+          summary: `Trợ lý ảo KanoFlow đã phân tích & gợi ý trên "${task.title}" theo yêu cầu của ${hydrated.author?.name || req.user.name}`,
+        });
+      } catch (aiErr) {
+        console.error("Lỗi tạo phản hồi @troliao cho task comment:", aiErr);
+      }
+    }
 
     res.status(201).json({
       message: "Đã đăng bình luận!",
       comment: hydrated,
+      ...(hydratedAi ? { aiComment: hydratedAi } : {}),
     });
   } catch (error) {
     console.error("Lỗi tạo bình luận:", error);
@@ -186,6 +312,10 @@ router.put("/comments/:id", async (req, res) => {
     const comment = await TaskComment.findByPk(id);
     if (!comment) {
       return res.status(404).json({ message: "Không tìm thấy bình luận!" });
+    }
+
+    if (comment.isAi) {
+      return res.status(403).json({ message: "Không thể chỉnh sửa phản hồi của Trợ lý ảo!" });
     }
 
     if (Number(comment.userId) !== Number(req.user.id)) {

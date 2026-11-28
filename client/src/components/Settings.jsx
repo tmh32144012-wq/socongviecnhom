@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Upload,
   RotateCcw,
@@ -107,7 +108,28 @@ function Settings({
   // Delete account modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const closeDeleteModal = () => {
+    if (deletingAccount) return;
+    setShowDeleteModal(false);
+    setDeletePassword("");
+    setDeleteError("");
+  };
+
+  useEffect(() => {
+    if (!showDeleteModal) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape" && !deletingAccount) {
+        setShowDeleteModal(false);
+        setDeletePassword("");
+        setDeleteError("");
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showDeleteModal, deletingAccount]);
 
   // Preferences
   const [notifyDeadline, setNotifyDeadline] = useState(
@@ -316,14 +338,24 @@ function Settings({
   // Delete Account Handler
   const handleDeleteAccountSubmit = async (e) => {
     e.preventDefault();
+    setDeleteError("");
     if (!deletePassword) {
-      showToast("Vui lòng nhập mật khẩu xác nhận xóa tài khoản!", "error");
+      const msg = "Vui lòng nhập mật khẩu xác nhận xóa tài khoản!";
+      setDeleteError(msg);
+      showToast(msg, "error");
       return;
     }
 
     setDeletingAccount(true);
-    await onDeleteAccount(deletePassword);
+    const result = await onDeleteAccount(deletePassword);
     setDeletingAccount(false);
+    if (result?.ok) {
+      setShowDeleteModal(false);
+      setDeletePassword("");
+      setDeleteError("");
+    } else if (result?.message) {
+      setDeleteError(result.message);
+    }
   };
 
   const renderThemeIcon = (id) => {
@@ -1274,82 +1306,101 @@ function Settings({
         )}
       </div>
 
-      {/* DELETE ACCOUNT CONFIRMATION MODAL */}
-      {showDeleteModal && (
-        <div
-          className="team-modal-backdrop"
-          onClick={() => {
-            setShowDeleteModal(false);
-            setDeletePassword("");
-          }}
-        >
-          <div
-            className="team-modal"
-            style={{ maxWidth: 440 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="team-modal-header">
-              <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--danger)" }}>
-                <AlertTriangle size={18} strokeWidth={1.75} />
-                <h2 style={{ color: "var(--danger)" }}>Xác nhận xóa tài khoản</h2>
-              </div>
-              <button
-                type="button"
-                className="team-modal-close"
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setDeletePassword("");
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={handleDeleteAccountSubmit}>
-              <div className="team-modal-body">
-                <p style={{ fontSize: 13.5, color: "var(--text-secondary)", marginBottom: 16 }}>
-                  Hành động này sẽ xóa vĩnh viễn toàn bộ dữ liệu của tài khoản{" "}
-                  <strong style={{ color: "var(--text-primary)" }}>{currentUser?.email}</strong>.
-                  Vui lòng nhập mật khẩu để xác nhận:
-                </p>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Mật khẩu của bạn *</label>
-                  <input
-                    type="password"
-                    className="form-input"
-                    value={deletePassword}
-                    onChange={(e) => setDeletePassword(e.target.value)}
-                    placeholder="Nhập mật khẩu..."
-                    required
-                    autoFocus
-                  />
+      {/* DELETE ACCOUNT CONFIRMATION MODAL (Portal directly onto body so it always centers in viewport) */}
+      {showDeleteModal &&
+        createPortal(
+          <div className="team-modal-backdrop" onClick={closeDeleteModal}>
+            <div
+              className="team-modal"
+              style={{ maxWidth: 440 }}
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-account-modal-title"
+            >
+              <div className="team-modal-header">
+                <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--danger)" }}>
+                  <AlertTriangle size={18} strokeWidth={1.75} />
+                  <h2 id="delete-account-modal-title" style={{ color: "var(--danger)" }}>
+                    Xác nhận xóa tài khoản
+                  </h2>
                 </div>
-              </div>
-
-              <div className="team-modal-footer">
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setDeletePassword("");
-                  }}
+                  className="team-modal-close"
+                  onClick={closeDeleteModal}
+                  aria-label="Đóng hộp thoại"
                 >
-                  Hủy bỏ
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-danger"
-                  disabled={deletingAccount}
-                >
-                  {deletingAccount ? "Đang xóa..." : "Xác nhận xóa"}
+                  ×
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <form onSubmit={handleDeleteAccountSubmit}>
+                <div className="team-modal-body">
+                  <p style={{ fontSize: 13.5, color: "var(--text-secondary)", marginBottom: 14, lineHeight: 1.55 }}>
+                    Hành động này sẽ xóa vĩnh viễn toàn bộ không gian làm việc do bạn sở hữu, công việc, danh mục và thông báo của tài khoản{" "}
+                    <strong style={{ color: "var(--text-primary)" }}>{currentUser?.email}</strong>. Vui lòng nhập mật khẩu để xác nhận:
+                  </p>
+
+                  {deleteError && (
+                    <div
+                      style={{
+                        background: "var(--danger-light)",
+                        border: "1px solid rgba(239, 68, 68, 0.35)",
+                        color: "var(--danger)",
+                        borderRadius: 8,
+                        padding: "9px 12px",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        marginBottom: 14,
+                      }}
+                    >
+                      {deleteError}
+                    </div>
+                  )}
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" htmlFor="delete-account-password">
+                      Mật khẩu của bạn *
+                    </label>
+                    <input
+                      id="delete-account-password"
+                      type="password"
+                      className="form-input"
+                      value={deletePassword}
+                      onChange={(e) => {
+                        setDeletePassword(e.target.value);
+                        if (deleteError) setDeleteError("");
+                      }}
+                      placeholder="Nhập mật khẩu để xác nhận..."
+                      required
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div className="team-modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={closeDeleteModal}
+                    disabled={deletingAccount}
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-danger"
+                    disabled={deletingAccount}
+                  >
+                    {deletingAccount ? "Đang xóa..." : "Xác nhận xóa vĩnh viễn"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
     </section>
   );
 }

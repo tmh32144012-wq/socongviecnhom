@@ -1,5 +1,6 @@
 const express = require("express");
 const fs = require("fs");
+const path = require("path");
 const multer = require("multer");
 const authenticateToken = require("../middleware/auth");
 const { upload, MAX_FILE_SIZE } = require("../middleware/upload");
@@ -92,7 +93,10 @@ router.post("/tasks/:taskId/attachments", (req, res) => {
 // 2. GET /api/tasks/:taskId/attachments — Lấy danh sách tệp đính kèm
 router.get("/tasks/:taskId/attachments", async (req, res) => {
   try {
-    const taskId = parseInt(req.params.taskId, 10);
+    const taskId = Number(req.params.taskId);
+    if (!Number.isInteger(taskId)) {
+      return res.status(400).json({ message: "ID công việc không hợp lệ!" });
+    }
     const task = await Task.findByPk(taskId);
     const allowed = task ? await canAccessTask(task, req.user.id) : false;
 
@@ -125,7 +129,10 @@ router.get("/tasks/:taskId/attachments", async (req, res) => {
 // 3. GET /api/attachments/:id/download — Tải về tệp đính kèm
 router.get("/attachments/:id/download", async (req, res) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ message: "ID tệp đính kèm không hợp lệ!" });
+    }
     const attachment = await Attachment.findByPk(id);
     if (!attachment) {
       return res.status(404).json({ message: "Không tìm thấy tệp đính kèm!" });
@@ -148,10 +155,47 @@ router.get("/attachments/:id/download", async (req, res) => {
   }
 });
 
+// 3b. GET /api/attachments/:id/preview — Xem trước trực tiếp ảnh / PDF (inline)
+router.get("/attachments/:id/preview", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ message: "ID tệp đính kèm không hợp lệ!" });
+    }
+    const attachment = await Attachment.findByPk(id);
+    if (!attachment) {
+      return res.status(404).json({ message: "Không tìm thấy tệp đính kèm!" });
+    }
+
+    const task = await Task.findByPk(attachment.taskId);
+    const allowed = task ? await canAccessTask(task, req.user.id) : Number(attachment.userId) === Number(req.user.id);
+    if (!allowed) {
+      return res.status(403).json({ message: "Bạn không có quyền xem tệp này!" });
+    }
+
+    if (!fs.existsSync(attachment.filePath)) {
+      return res.status(404).json({ message: "Tệp tin vật lý không tồn tại trên máy chủ!" });
+    }
+
+    const safeMime = attachment.mimeType || "application/octet-stream";
+    const safeFileName = encodeURIComponent(attachment.originalName || "file");
+    res.setHeader("Content-Type", safeMime);
+    res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${safeFileName}`);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    return res.sendFile(path.resolve(attachment.filePath));
+  } catch (error) {
+    console.error("Lỗi xem trước tệp:", error);
+    return res.status(500).json({ message: "Không thể xem trước tệp tin!" });
+  }
+});
+
 // 4. DELETE /api/attachments/:id — Xóa tệp đính kèm
 router.delete("/attachments/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ message: "ID tệp đính kèm không hợp lệ!" });
+    }
     const attachment = await Attachment.findByPk(id);
     if (!attachment) {
       return res.status(404).json({ message: "Không tìm thấy tệp đính kèm!" });

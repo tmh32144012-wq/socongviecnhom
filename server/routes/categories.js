@@ -1,5 +1,6 @@
 const express = require("express");
-const { Category, Task, sequelize } = require("../models");
+const { Op } = require("sequelize");
+const { Category, Task } = require("../models");
 const authenticateToken = require("../middleware/auth");
 
 const router = express.Router();
@@ -99,7 +100,7 @@ router.put("/:id", async (req, res) => {
       where: {
         userId: req.user.id,
         name: categoryName,
-        id: { [sequelize.Op.ne]: id },
+        id: { [Op.ne]: id },
       },
     });
 

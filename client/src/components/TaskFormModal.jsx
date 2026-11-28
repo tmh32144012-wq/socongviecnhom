@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { API_ENDPOINTS, getAuthHeaders } from "../config/api";
 import UserAvatar from "./UserAvatar";
 
@@ -168,7 +169,7 @@ function TaskFormModal({
     }
   };
 
-  return (
+  return createPortal(
     <div className="team-modal-backdrop" onClick={onClose}>
       <div className="team-modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
         <div className="team-modal-header">
@@ -376,7 +377,8 @@ function TaskFormModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

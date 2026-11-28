@@ -3,10 +3,15 @@ const {
   Board,
   BoardMember,
   BoardColumn,
+  BoardLabel,
+  BoardMessage,
+  ActivityLog,
   Task,
   TaskAssignee,
   TaskComment,
   TaskProgressStep,
+  TaskLabel,
+  Attachment,
   Notification,
   User,
   Op,
@@ -20,6 +25,7 @@ const {
 } = require("../utils/boardAccess");
 const { hydrateTasks, TASK_ATTRIBUTES } = require("../utils/taskHydrator");
 const { emitBoardEvent, emitUserEvent } = require("../socket");
+const { sendBoardInvitationEmail } = require("../utils/mailer");
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -371,6 +377,9 @@ router.delete("/:boardId", async (req, res) => {
       await TaskAssignee.destroy({ where: { taskId: { [Op.in]: taskIds } } });
       await TaskComment.destroy({ where: { taskId: { [Op.in]: taskIds } } });
       await TaskProgressStep.destroy({ where: { taskId: { [Op.in]: taskIds } } });
+      await TaskLabel.destroy({ where: { taskId: { [Op.in]: taskIds } } });
+      await Attachment.destroy({ where: { taskId: { [Op.in]: taskIds } } });
+      await ActivityLog.destroy({ where: { taskId: { [Op.in]: taskIds } } });
       await Notification.update(
         { taskId: null },
         { where: { taskId: { [Op.in]: taskIds } } }
@@ -378,6 +387,9 @@ router.delete("/:boardId", async (req, res) => {
       await Task.destroy({ where: { id: { [Op.in]: taskIds } } });
     }
 
+    await ActivityLog.destroy({ where: { boardId } });
+    await BoardMessage.destroy({ where: { boardId } });
+    await BoardLabel.destroy({ where: { boardId } });
     await BoardColumn.destroy({ where: { boardId } });
     await BoardMember.destroy({ where: { boardId } });
     await board.destroy();
@@ -515,12 +527,24 @@ router.post("/:boardId/members", async (req, res) => {
       notification: notif.toJSON(),
     });
 
+    const mailResult = await sendBoardInvitationEmail({
+      to: targetUser.email,
+      inviteeName: targetUser.name,
+      inviterName: inviter?.name || req.user.name,
+      boardName: board.name,
+      role: role === "admin" ? "admin" : "member",
+      mode,
+    });
+
     res.status(201).json({
       message:
         mode === "direct"
           ? `Đã thêm ${targetUser.name} vào không gian làm việc!`
+          : mailResult.sent
+          ? `Đã gửi lời mời & email thông báo tới ${targetUser.name}!`
           : `Đã gửi lời mời tham gia đến ${targetUser.name}!`,
       members,
+      emailSent: mailResult.sent,
     });
   } catch (error) {
     console.error("Lỗi thêm thành viên:", error);
@@ -534,6 +558,9 @@ router.post("/:boardId/members", async (req, res) => {
 router.post("/:boardId/invitations/respond", async (req, res) => {
   try {
     const boardId = Number(req.params.boardId);
+    if (!Number.isInteger(boardId)) {
+      return res.status(400).json({ message: "ID Board không hợp lệ!" });
+    }
     const { action } = req.body; // 'accept' | 'decline'
 
     const invite = await BoardMember.findOne({

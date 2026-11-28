@@ -118,6 +118,46 @@
   border-color: transparent;
 }
 
+.collab-ai-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-soft, rgba(16, 185, 129, 0.16));
+  color: var(--accent-color, #10b981);
+  border: 1px solid color-mix(in srgb, var(--accent-color, #10b981) 38%, transparent);
+}
+
+.collab-msg.is-ai .collab-msg-bubble {
+  max-width: 88%;
+  background: color-mix(in srgb, var(--accent-color, #10b981) 9%, var(--bg-input, #18181b));
+  border-color: color-mix(in srgb, var(--accent-color, #10b981) 32%, var(--border-color));
+}
+
+.collab-ai-badge {
+  margin-left: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--accent-soft, rgba(16, 185, 129, 0.18));
+  color: var(--accent-color, #10b981);
+}
+
+.collab-mention-bar .collab-ai-mention-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent-soft, rgba(16, 185, 129, 0.14));
+  border-color: color-mix(in srgb, var(--accent-color, #10b981) 42%, transparent);
+  color: var(--accent-color, #10b981);
+}
+
 .collab-msg-meta {
   display: flex;
   justify-content: space-between;

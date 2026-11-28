@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import UserAvatar from "./UserAvatar";
 import { API_ENDPOINTS, getAuthHeaders } from "../config/api";
 
@@ -124,7 +125,7 @@ function BoardMembersModal({
     }
   };
 
-  return (
+  return createPortal(
     <div className="team-modal-backdrop" onClick={onClose}>
       <div className="team-modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
         <div className="team-modal-header">
@@ -270,7 +271,8 @@ function BoardMembersModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

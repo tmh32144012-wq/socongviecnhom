@@ -1,8 +1,25 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { Bot, Eye, Download, X } from "lucide-react";
 import { API_ENDPOINTS, getAuthHeaders } from "../config/api";
 import { getSocket } from "../config/socket";
 import UserAvatar from "./UserAvatar";
 import "./TaskDetail.css";
+
+const AI_MENTION_PATTERN = /(?:^|\s)@\s*(?:troliao|trolyao|troly|ai)(?=$|[\s,.;:!?])/i;
+
+function isPreviewableAttachment(att) {
+  const mime = (att?.mimeType || "").toLowerCase();
+  const name = (att?.originalName || "").toLowerCase();
+  if (mime.startsWith("image/") || mime === "application/pdf") return true;
+  return /\.(png|jpe?g|gif|webp|pdf)$/i.test(name);
+}
+
+function isPdfAttachment(att) {
+  const mime = (att?.mimeType || "").toLowerCase();
+  const name = (att?.originalName || "").toLowerCase();
+  return mime === "application/pdf" || name.endsWith(".pdf");
+}
 
 function TaskDetail({
   selectedTask,
@@ -35,6 +52,9 @@ function TaskDetail({
   const [attachments, setAttachments] = useState([]);
   const [loadingAttachments, setLoadingAttachments] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [previewAtt, setPreviewAtt] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const fileInputRef = useRef(null);
 
   // Comments state
@@ -142,7 +162,9 @@ function TaskDetail({
           const data = await res.json();
           setTaskActivities(data.activities || []);
         }
-      } catch (_) {}
+      } catch {
+        // Ignore transient activity load failure
+      }
     };
 
     const fetchBoardLabels = async () => {
@@ -158,7 +180,9 @@ function TaskDetail({
           const data = await res.json();
           setBoardLabels(data.labels || []);
         }
-      } catch (_) {}
+      } catch {
+        // Ignore transient label load failure
+      }
     };
 
     fetchAttachments();
@@ -199,6 +223,25 @@ function TaskDetail({
       socket.off("comment:deleted", handleDeleted);
     };
   }, [selectedTask?.id]);
+
+  // Revoke object URL when preview changes/closes & allow Escape key to close Lightbox
+  useEffect(() => {
+    return () => {
+      if (previewUrl) window.URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  useEffect(() => {
+    if (!previewAtt) return undefined;
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setPreviewAtt(null);
+        setPreviewUrl("");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [previewAtt]);
 
   if (!selectedTask) return null;
 
@@ -279,9 +322,16 @@ function TaskDetail({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Không thể đăng bình luận");
-      setComments((prev) =>
-        prev.some((c) => c.id === data.comment.id) ? prev : [...prev, data.comment]
-      );
+      setComments((prev) => {
+        let next = prev;
+        if (data.comment && !next.some((c) => c.id === data.comment.id)) {
+          next = [...next, data.comment];
+        }
+        if (data.aiComment && !next.some((c) => c.id === data.aiComment.id)) {
+          next = [...next, data.aiComment];
+        }
+        return next;
+      });
       setNewComment("");
     } catch (err) {
       showToast?.(err.message, "error");
@@ -375,6 +425,37 @@ function TaskDetail({
     } catch (err) {
       showToast?.(err.message, "error");
     }
+  };
+
+  const handlePreviewAttachment = async (att) => {
+    try {
+      setPreviewAtt(att);
+      setLoadingPreview(true);
+      if (previewUrl) {
+        window.URL.revokeObjectURL(previewUrl);
+        setPreviewUrl("");
+      }
+      const res = await fetch(API_ENDPOINTS.attachmentPreview(att.id), {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Không thể xem trước tệp này");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      setPreviewUrl(url);
+    } catch (err) {
+      showToast?.(err.message, "error");
+      setPreviewAtt(null);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const closePreview = () => {
+    if (previewUrl) {
+      window.URL.revokeObjectURL(previewUrl);
+      setPreviewUrl("");
+    }
+    setPreviewAtt(null);
   };
 
   const handleDeleteAttachment = (att) => {
@@ -670,6 +751,17 @@ function TaskDetail({
                       <div className="td-attachment-meta">{formatFileSize(att.fileSize)}</div>
                     </div>
                     <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                      {isPreviewableAttachment(att) && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handlePreviewAttachment(att)}
+                          title="Xem trước trực tiếp"
+                        >
+                          <Eye size={13} strokeWidth={2} />
+                          <span>Xem trước</span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="btn btn-secondary btn-sm"
@@ -706,21 +798,29 @@ function TaskDetail({
             ) : (
               <div className="td-comments-list">
                 {comments.map((c) => {
+                  const isAi = Boolean(c.isAi || c.author?.isAi);
                   const isMine = Number(c.userId) === Number(currentUser?.id);
                   return (
-                    <div key={c.id} className="td-comment-item">
-                      <UserAvatar avatar={c.author?.avatar} name={c.author?.name} size={32} />
+                    <div key={c.id} className={`td-comment-item ${isAi ? "is-ai" : ""}`}>
+                      {isAi ? (
+                        <div className="td-ai-avatar" title="Trợ lý ảo KanoFlow">
+                          <Bot size={16} strokeWidth={1.9} />
+                        </div>
+                      ) : (
+                        <UserAvatar avatar={c.author?.avatar} name={c.author?.name} size={32} />
+                      )}
                       <div className="td-comment-bubble">
                         <div className="td-comment-head">
                           <span className="td-comment-author">
-                            {c.author?.name || "Thành viên"}
+                            {c.author?.name || (isAi ? "Trợ lý ảo KanoFlow" : "Thành viên")}
+                            {isAi && <span className="td-ai-badge">TRỢ LÝ ẢO · CẢ NHÓM THẤY</span>}
                           </span>
                           <span className="td-comment-time">
                             {formatCommentTime(c.createdAt)}
                           </span>
                         </div>
 
-                        {editingCommentId === c.id ? (
+                        {editingCommentId === c.id && !isAi ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             <textarea
                               className="form-textarea"
@@ -751,16 +851,18 @@ function TaskDetail({
                             <p className="td-comment-text">{c.content}</p>
                             {isMine && (
                               <div className="td-comment-actions">
-                                <button
-                                  type="button"
-                                  className="td-comment-link"
-                                  onClick={() => {
-                                    setEditingCommentId(c.id);
-                                    setEditingCommentText(c.content);
-                                  }}
-                                >
-                                  Chỉnh sửa
-                                </button>
+                                {!isAi && (
+                                  <button
+                                    type="button"
+                                    className="td-comment-link"
+                                    onClick={() => {
+                                      setEditingCommentId(c.id);
+                                      setEditingCommentText(c.content);
+                                    }}
+                                  >
+                                    Chỉnh sửa
+                                  </button>
+                                )}
                                 <button
                                   type="button"
                                   className="td-comment-link danger"
@@ -780,25 +882,36 @@ function TaskDetail({
             )}
 
             {/* COMMENT COMPOSER */}
-            {resolvedMembers.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8, alignItems: "center", fontSize: 12, color: "var(--text-secondary)" }}>
-                <span>Nhắc tên (@mention):</span>
-                {resolvedMembers
-                  .filter((m) => Number(m.userId) !== Number(currentUser?.id))
-                  .slice(0, 5)
-                  .map((m) => (
-                    <button
-                      key={m.userId}
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: "2px 8px", fontSize: 11.5 }}
-                      onClick={() => setNewComment((prev) => `${prev}${prev ? " " : ""}@${m.user?.name} `)}
-                    >
-                      @{m.user?.name}
-                    </button>
-                  ))}
-              </div>
-            )}
+            <div className="td-mention-bar">
+              <span>Nhắc nhanh:</span>
+              <button
+                type="button"
+                className="td-mention-ai-btn"
+                onClick={() =>
+                  setNewComment((prev) =>
+                    prev.includes("@troliao") ? prev : `${prev}${prev ? " " : ""}@troliao `
+                  )
+                }
+                title="Gọi Trợ lý ảo phân tích & gợi ý — mọi thành viên trong công việc đều thấy"
+              >
+                <Bot size={12} strokeWidth={2} />
+                <span>@troliao</span>
+              </button>
+              {resolvedMembers
+                .filter((m) => Number(m.userId) !== Number(currentUser?.id))
+                .slice(0, 5)
+                .map((m) => (
+                  <button
+                    key={m.userId}
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: "2px 8px", fontSize: 11.5 }}
+                    onClick={() => setNewComment((prev) => `${prev}${prev ? " " : ""}@${m.user?.name} `)}
+                  >
+                    @{m.user?.name}
+                  </button>
+                ))}
+            </div>
 
             <form className="td-comment-composer" onSubmit={handlePostComment}>
               <UserAvatar avatar={currentUser?.avatar} name={currentUser?.name} size={32} />
@@ -806,7 +919,7 @@ function TaskDetail({
                 <textarea
                   className="form-textarea"
                   rows={2}
-                  placeholder="Viết bình luận trao đổi cùng nhóm... (Ctrl + Enter để gửi)"
+                  placeholder="Viết bình luận trao đổi cùng nhóm... Gõ @troliao để AI gợi ý cho cả nhóm (Ctrl + Enter để gửi)"
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   onKeyDown={(e) => {
@@ -816,13 +929,22 @@ function TaskDetail({
                     }
                   }}
                 />
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                  <span className="td-ai-hint">
+                    {AI_MENTION_PATTERN.test(newComment)
+                      ? "Trợ lý ảo sẽ phân tích công việc này và phản hồi công khai cho mọi thành viên."
+                      : "Mẹo: Gõ @troliao kèm câu hỏi để AI hỗ trợ trực tiếp trong thẻ."}
+                  </span>
                   <button
                     type="submit"
                     className="btn btn-primary btn-sm"
                     disabled={postingComment || !newComment.trim()}
                   >
-                    {postingComment ? "Đang gửi..." : "Gửi bình luận"}
+                    {postingComment
+                      ? AI_MENTION_PATTERN.test(newComment)
+                        ? "Trợ lý đang phân tích..."
+                        : "Đang gửi..."
+                      : "Gửi bình luận"}
                   </button>
                 </div>
               </div>
@@ -1032,8 +1154,9 @@ function TaskDetail({
       </div>
 
       {/* EDIT TASK MODAL */}
-      {isEditingTask && (
-        <div className="team-modal-backdrop" onClick={() => setIsEditingTask(false)}>
+      {isEditingTask &&
+        createPortal(
+          <div className="team-modal-backdrop" onClick={() => setIsEditingTask(false)}>
           <div className="team-modal" onClick={(e) => e.stopPropagation()}>
             <div className="team-modal-header">
               <h2>Chỉnh sửa thông tin thẻ</h2>
@@ -1154,8 +1277,55 @@ function TaskDetail({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
+
+      {/* INLINE ATTACHMENT PREVIEW LIGHTBOX (IMAGE / PDF) */}
+      {previewAtt &&
+        createPortal(
+          <div className="td-preview-backdrop" onClick={closePreview} role="dialog" aria-modal="true">
+            <div className="td-preview-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="td-preview-header">
+                <div className="td-preview-title" title={previewAtt.originalName}>
+                  {previewAtt.originalName} ({formatFileSize(previewAtt.fileSize)})
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleDownloadAttachment(previewAtt)}
+                  >
+                    <Download size={13} strokeWidth={2} />
+                    <span>Tải về</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={closePreview}
+                    aria-label="Đóng xem trước"
+                  >
+                    <X size={16} strokeWidth={2} />
+                  </button>
+                </div>
+              </div>
+              <div className="td-preview-body">
+                {loadingPreview ? (
+                  <p className="text-muted text-sm">Đang tải bản xem trước...</p>
+                ) : previewUrl ? (
+                  isPdfAttachment(previewAtt) ? (
+                    <iframe title={previewAtt.originalName} src={previewUrl} />
+                  ) : (
+                    <img src={previewUrl} alt={previewAtt.originalName} />
+                  )
+                ) : (
+                  <p className="text-muted text-sm">Không thể hiển thị tệp này.</p>
+                )}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </section>
   );
 }

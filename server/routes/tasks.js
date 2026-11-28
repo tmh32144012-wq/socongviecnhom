@@ -8,6 +8,9 @@ const {
   TaskAssignee,
   TaskComment,
   TaskProgressStep,
+  TaskLabel,
+  Attachment,
+  ActivityLog,
   Notification,
   User,
   Op,
@@ -1005,6 +1008,9 @@ async function permanentlyDeleteTask(task) {
   await TaskAssignee.destroy({ where: { taskId: id } });
   await TaskComment.destroy({ where: { taskId: id } });
   await TaskProgressStep.destroy({ where: { taskId: id } });
+  await TaskLabel.destroy({ where: { taskId: id } });
+  await Attachment.destroy({ where: { taskId: id } });
+  await ActivityLog.destroy({ where: { taskId: id } });
   await Notification.destroy({ where: { taskId: id } });
   await task.destroy();
 }

@@ -13,6 +13,7 @@ const { createRateLimiter } = require("./middleware/rateLimit");
 const { startReminderScheduler } = require("./utils/reminderScheduler");
 
 const authRoutes = require("./routes/auth");
+const oauthRoutes = require("./routes/oauth");
 const boardRoutes = require("./routes/boards");
 const columnRoutes = require("./routes/columns");
 const commentRoutes = require("./routes/comments");
@@ -68,6 +69,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api", authRoutes);
+app.use("/api/auth", oauthRoutes);
 app.use("/api/boards", boardRoutes);
 app.use("/api", columnRoutes);
 app.use("/api", commentRoutes);

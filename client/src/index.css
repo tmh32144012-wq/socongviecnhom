@@ -44,6 +44,7 @@
   --accent-hover: #1D4ED8;
   --accent-soft: rgba(37, 99, 235, 0.1);
   --accent-ring: rgba(37, 99, 235, 0.22);
+  --accent-glow: var(--accent-ring);
   --accent-fg: #FFFFFF;
   --accent-contrast: #FFFFFF;
 
@@ -637,6 +638,8 @@ h2,
 /* Modals & Popovers: luminous liquid crystal with crisp legibility */
 :root[data-theme="glass"] .team-modal,
 :root[data-theme="glass"] .theme-quick-popover,
+:root[data-theme="glass"] .toast-item,
+:root[data-theme="glass"] .collab-drawer,
 :root[data-theme="glass"] .modal-content,
 :root[data-theme="glass"] .modal-box,
 :root[data-theme="glass"] .confirm-modal,

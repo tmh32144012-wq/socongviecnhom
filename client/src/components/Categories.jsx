@@ -8,11 +8,17 @@ function Categories({
   fetchCategories,
   setCurrentPage,
   setCategoryFilter,
+  showToast,
+  askConfirm,
 }) {
   const [showForm, setShowForm] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
+
+  const notify = (msg, type = "info") => {
+    if (showToast) showToast(msg, type);
+  };
 
   // =========================
   // THÊM DANH MỤC
@@ -21,7 +27,7 @@ function Categories({
     event.preventDefault();
 
     if (categoryName.trim() === "") {
-      alert("Vui lòng nhập tên danh mục!");
+      notify("Vui lòng nhập tên danh mục!", "error");
       return;
     }
 
@@ -49,62 +55,65 @@ function Categories({
 
       setCategoryName("");
       setShowForm(false);
+      notify("Đã thêm danh mục mới thành công!", "success");
     } catch (error) {
       console.error("Lỗi khi thêm danh mục:", error);
-      alert(error.message || "Không thể thêm danh mục.");
+      notify(error.message || "Không thể thêm danh mục.", "error");
     }
   };
 
   // =========================
   // XÓA DANH MỤC
   // =========================
-  const handleDeleteCategory = async (id) => {
-    const confirmDelete = window.confirm("Bạn có chắc muốn xóa danh mục này?");
-    if (!confirmDelete) {
-      return;
-    }
-
+  const executeDeleteCategory = async (id, moveToUncategorized = false) => {
     try {
       const token = localStorage.getItem("token");
+      const url = moveToUncategorized
+        ? `${API_ENDPOINTS.categoryById(id)}?moveTo=uncategorized`
+        : API_ENDPOINTS.categoryById(id);
 
-      let response = await fetch(API_ENDPOINTS.categoryById(id), {
+      const response = await fetch(url, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      let data = await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
-        if (data.requiresAction) {
-          const confirmUncategorize = window.confirm(
-            `${data.message}\n\nBạn có muốn chuyển các công việc này về 'Chưa phân loại' để tiếp tục xóa không?`
-          );
-          if (!confirmUncategorize) return;
-
-          response = await fetch(
-            `${API_ENDPOINTS.categoryById(id)}?moveTo=uncategorized`,
-            {
-              method: "DELETE",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-          data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.message || "Không thể xóa danh mục");
-          }
-        } else {
-          throw new Error(data.message || "Không thể xóa danh mục");
+        if (data.requiresAction && !moveToUncategorized && askConfirm) {
+          askConfirm({
+            title: "Danh mục đang có công việc",
+            message: `${data.message}\n\nBạn có muốn chuyển các công việc này về "Chưa phân loại" để tiếp tục xóa không?`,
+            confirmText: "Chuyển & Xóa danh mục",
+            isDanger: true,
+            onConfirm: () => executeDeleteCategory(id, true),
+          });
+          return;
         }
+        throw new Error(data.message || "Không thể xóa danh mục");
       }
 
       await fetchCategories();
+      notify("Đã xóa danh mục thành công!", "success");
     } catch (error) {
       console.error("Lỗi khi xóa danh mục:", error);
-      alert(error.message || "Không thể xóa danh mục.");
+      notify(error.message || "Không thể xóa danh mục.", "error");
+    }
+  };
+
+  const handleDeleteCategory = (id) => {
+    if (askConfirm) {
+      askConfirm({
+        title: "Xác nhận xóa danh mục",
+        message: "Bạn có chắc muốn xóa danh mục này không?",
+        confirmText: "Xóa danh mục",
+        isDanger: true,
+        onConfirm: () => executeDeleteCategory(id, false),
+      });
+    } else {
+      executeDeleteCategory(id, false);
     }
   };
 
@@ -113,7 +122,7 @@ function Categories({
   // =========================
   const handleEditCategory = async (categoryId) => {
     if (editingCategoryName.trim() === "") {
-      alert("Tên danh mục không được để trống!");
+      notify("Tên danh mục không được để trống!", "error");
       return;
     }
 
@@ -142,10 +151,10 @@ function Categories({
       setEditingCategoryId(null);
       setEditingCategoryName("");
 
-      alert("Cập nhật danh mục thành công!");
+      notify("Cập nhật danh mục thành công!", "success");
     } catch (error) {
       console.error("Lỗi khi cập nhật danh mục:", error);
-      alert(error.message || "Không thể cập nhật danh mục.");
+      notify(error.message || "Không thể cập nhật danh mục.", "error");
     }
   };
 

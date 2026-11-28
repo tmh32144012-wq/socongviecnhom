@@ -18,15 +18,22 @@ import {
   SlidersHorizontal,
   Play,
   Pause,
+  LogIn,
+  UserPlus,
+  Layers,
+  Zap,
+  ShieldCheck,
+  Activity,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import BrandLogo from "./BrandLogo";
 import "./WelcomeShowcase.css";
 
 const PAGES = [
-  { id: 0, navLabel: "Tổng quan" },
-  { id: 1, navLabel: "Cộng tác Kanban" },
-  { id: 2, navLabel: "Lịch & Thống kê" },
-  { id: 3, navLabel: "Cá nhân hóa" },
+  { id: 0, navLabel: "Khám phá KanoFlow" },
+  { id: 1, navLabel: "Cộng tác Realtime" },
+  { id: 2, navLabel: "Lịch & Thống kê AI" },
+  { id: 3, navLabel: "4 Chủ đề & Nền" },
 ];
 
 const AUTO_PLAY_MS = 6500;
@@ -120,6 +127,7 @@ function WelcomeShowcase({ onSkipToLogin, onGoToRegister }) {
   const [isHoverPaused, setIsHoverPaused] = useState(false);
   const [demoCards, setDemoCards] = useState(INITIAL_DEMO_CARDS);
   const [memberFilter, setMemberFilter] = useState("Tất cả");
+  const [collabTab, setCollabTab] = useState("comments");
   const [activePromptId, setActivePromptId] = useState("risk");
 
   const goToStep = useCallback((nextIdx) => {
@@ -198,16 +206,12 @@ function WelcomeShowcase({ onSkipToLogin, onGoToRegister }) {
       {/* TOP NAVIGATION BAR */}
       <header className="welcome-nav">
         <div className="welcome-nav-inner">
-          <div className="welcome-brand" onClick={() => goToStep(0)} role="button" tabIndex={0}>
-            <div className="welcome-brand-mark">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="5" height="14" rx="1.2" />
-                <rect x="9.5" y="3" width="5" height="9" rx="1.2" />
-                <rect x="16" y="3" width="5" height="18" rx="1.2" />
-              </svg>
-            </div>
-            <span className="welcome-brand-name">Sổ Việc Nhóm</span>
-          </div>
+          <BrandLogo
+            size="md"
+            animated
+            subtitle="Kanban Realtime"
+            onClick={() => goToStep(0)}
+          />
 
           <nav className="welcome-tabs" aria-label="Các trang giới thiệu">
             {PAGES.map((p) => (
@@ -264,30 +268,38 @@ function WelcomeShowcase({ onSkipToLogin, onGoToRegister }) {
           {step === 0 && (
             <section className="intro-slide intro-hero-layout">
               <div className="intro-hero-left">
-                <div className="intro-step-pill kinetic-from-left k-delay-1">
-                  <span>1 / 4</span>
-                  <span>Không gian quản lý công việc nhóm</span>
+                <div className="kinetic-from-left k-delay-1">
+                  <BrandLogo
+                    size="hero"
+                    subtitle="Không gian Kanban Đội nhóm • Đồng bộ Thời gian thực"
+                  />
                 </div>
 
                 <h1 className="kinetic-from-left k-delay-2">
-                  Sắp xếp việc nhóm rõ ràng ngay từ đầu tuần.
+                  Vận hành việc nhóm mượt như một <span className="intro-headline-accent">dòng chảy</span>.
                 </h1>
 
                 <p className="intro-lead kinetic-from-left k-delay-3">
-                  Tạo bảng Kanban cho từng đồ án, chia cột linh hoạt, phân công thành viên và theo dõi hạn chót trong cùng một không gian gọn gàng — không cần chuyển qua lại giữa bảng tính và nhóm chat.
+                  <strong>KanoFlow</strong> gom trọn bảng Kanban kéo thả, phân công đa thành viên, lịch hạn chót, chat nhóm và thống kê hiệu suất vào một không gian thống nhất — rõ người làm, rõ hạn nộp, đồng bộ tức thì không cần F5.
                 </p>
+
+                <div className="intro-tech-chips kinetic-from-left k-delay-4">
+                  <span>Kéo thả cột linh hoạt</span>
+                  <span>Socket.io thời gian thực</span>
+                  <span>Theo dõi người sửa cuối</span>
+                </div>
 
                 <div className="intro-cta-row kinetic-from-left k-delay-4">
                   <button type="button" className="btn btn-primary intro-btn-lg" onClick={onSkipToLogin}>
-                    Đăng nhập vào không gian
+                    Đăng nhập vào KanoFlow
                   </button>
                   <button type="button" className="btn btn-secondary intro-btn-lg" onClick={onGoToRegister}>
-                    Tạo tài khoản mới
+                    Tạo tài khoản miễn phí
                   </button>
                 </div>
 
                 <div className="intro-footnote kinetic-from-left k-delay-5">
-                  <span>Có sẵn 3 tài khoản nhóm mẫu để dùng thử ngay sau khi đăng nhập.</span>
+                  <span>Bấm thử trực tiếp các thẻ ở bảng bên phải hoặc nhấn <strong>Bỏ qua</strong> để vào ngay.</span>
                 </div>
               </div>
 
@@ -297,7 +309,7 @@ function WelcomeShowcase({ onSkipToLogin, onGoToRegister }) {
                   <div className="playground-topbar">
                     <div className="playground-title-group">
                       <span className="playground-board-dot" />
-                      <strong>Dự án Website Kanban</strong>
+                      <strong>KanoFlow • Dự án Phát triển Web</strong>
                       <span className="playground-live-tag">Thử bấm vào thẻ</span>
                     </div>
 
@@ -429,24 +441,64 @@ function WelcomeShowcase({ onSkipToLogin, onGoToRegister }) {
                   </div>
 
                   <div className="collab-comments">
-                    <div className="collab-comment-title">
-                      <MessageSquare size={14} strokeWidth={1.85} />
-                      <span>Trao đổi trực tiếp trên thẻ</span>
+                    <div className="collab-tab-strip">
+                      <button
+                        type="button"
+                        className={`collab-tab-btn ${collabTab === "comments" ? "active" : ""}`}
+                        onClick={() => {
+                          setAutoPlay(false);
+                          setCollabTab("comments");
+                        }}
+                      >
+                        <MessageSquare size={13} strokeWidth={2} />
+                        <span>Bình luận thẻ</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`collab-tab-btn ${collabTab === "chat" ? "active" : ""}`}
+                        onClick={() => {
+                          setAutoPlay(false);
+                          setCollabTab("chat");
+                        }}
+                      >
+                        <Activity size={13} strokeWidth={2} />
+                        <span>Nhật ký sửa đổi</span>
+                      </button>
                     </div>
-                    <div className="collab-bubble">
-                      <div className="collab-bubble-head">
-                        <strong>Ngọc Lan</strong>
-                        <span>Vừa xong</span>
+
+                    {collabTab === "comments" ? (
+                      <>
+                        <div className="collab-bubble">
+                          <div className="collab-bubble-head">
+                            <strong>Ngọc Lan</strong>
+                            <span>Vừa xong</span>
+                          </div>
+                          <p>Mình vừa kéo xong phần kiểm tra quyền Chủ bảng và Thành viên, bạn kéo lại thử trên trình duyệt thứ hai nhé.</p>
+                        </div>
+                        <div className="collab-bubble is-reply">
+                          <div className="collab-bubble-head">
+                            <strong>Minh Hy</strong>
+                            <span>1 phút trước</span>
+                          </div>
+                          <p>Đã nhận cập nhật tức thì không cần tải lại trang. Chốt để chuyển sang cột Hoàn thành.</p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="collab-audit-preview">
+                        <div className="collab-audit-row">
+                          <span>Người sửa gần nhất</span>
+                          <strong>Ngọc Lan • 12 giây trước</strong>
+                        </div>
+                        <div className="collab-audit-row">
+                          <span>Thời gian tạo thẻ</span>
+                          <strong>24/11/2026 09:15</strong>
+                        </div>
+                        <div className="collab-audit-row">
+                          <span>Trạng thái đồng bộ</span>
+                          <strong style={{ color: "var(--success)" }}>Socket.io trực tiếp • 3 thành viên</strong>
+                        </div>
                       </div>
-                      <p>Mình vừa kéo xong phần kiểm tra quyền Chủ bảng và Thành viên, bạn kéo lại thử trên trình duyệt thứ hai nhé.</p>
-                    </div>
-                    <div className="collab-bubble is-reply">
-                      <div className="collab-bubble-head">
-                        <strong>Minh Hy</strong>
-                        <span>1 phút trước</span>
-                      </div>
-                      <p>Đã nhận cập nhật tức thì không cần tải lại trang. Chốt để chuyển sang cột Hoàn thành.</p>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -454,29 +506,29 @@ function WelcomeShowcase({ onSkipToLogin, onGoToRegister }) {
               <div className="intro-copy-col">
                 <div className="intro-step-pill kinetic-from-right k-delay-1">
                   <span>2 / 4</span>
-                  <span>Làm việc nhóm thời gian thực</span>
+                  <span>KanoFlow • Cộng tác Thời gian thực</span>
                 </div>
 
                 <h2 className="kinetic-from-right k-delay-2">
-                  Mọi thay đổi hiện ngay trên màn hình cả đội.
+                  Biết chính xác ai vừa sửa, việc nào vừa xong — ngay lập tức.
                 </h2>
 
                 <p className="intro-lead kinetic-from-right k-delay-3">
-                  Không còn cảnh gửi ảnh chụp màn hình để hỏi "việc này tới đâu rồi". Mọi thẻ công việc, thành viên phụ trách và thảo luận đều nằm đúng ngữ cảnh.
+                  Mọi thao tác trên KanoFlow đều được ghi nhận minh bạch và truyền trực tiếp tới màn hình toàn nhóm qua Socket.io: từ kéo thả thẻ, bình luận, chat nhóm đến tên người chỉnh sửa gần nhất.
                 </p>
 
                 <div className="intro-feature-rows">
                   <div className="intro-feature-row kinetic-from-right k-delay-3">
-                    <strong>Mời thành viên &amp; phân vai rõ ràng</strong>
-                    <p>Gửi lời mời tham gia bảng theo email với vai trò Chủ bảng, Quản trị hoặc Thành viên.</p>
+                    <strong>Phân quyền bảng &amp; gắn nhiều thành viên</strong>
+                    <p>Mời đồng đội bằng email theo vai trò Chủ bảng, Quản trị, Thành viên kèm nhãn màu phân loại trực quan.</p>
                   </div>
                   <div className="intro-feature-row kinetic-from-right k-delay-4">
-                    <strong>Kéo thả mượt, đồng bộ qua Socket.io</strong>
-                    <p>Khi một người đổi cột, cập nhật tiến độ hoặc thêm bình luận, cả nhóm thấy ngay lập tức.</p>
+                    <strong>Nhật ký chỉnh sửa &amp; Chat nhóm ngay trên bảng</strong>
+                    <p>Hiển thị thời gian tạo, thời điểm hoàn thành, tên người sửa cuối theo thời gian thực cùng khung chat nhóm tích hợp.</p>
                   </div>
                   <div className="intro-feature-row kinetic-from-right k-delay-5">
-                    <strong>Checklist, tệp đính kèm &amp; lưu trữ gọn</strong>
-                    <p>Tách nhỏ đầu việc thành từng bước con, tải tài liệu trực tiếp và cất việc cũ vào kho lưu trữ.</p>
+                    <strong>Checklist từng bước, tệp đính kèm &amp; lưu trữ an toàn</strong>
+                    <p>Tự động cập nhật tiến độ theo bước con, tải tài liệu có kiểm duyệt định dạng và khôi phục dễ dàng từ Kho lưu trữ.</p>
                   </div>
                 </div>
               </div>
@@ -489,29 +541,29 @@ function WelcomeShowcase({ onSkipToLogin, onGoToRegister }) {
               <div className="intro-copy-col">
                 <div className="intro-step-pill kinetic-from-left k-delay-1">
                   <span>3 / 4</span>
-                  <span>Lịch trình &amp; Kiểm soát tiến độ</span>
+                  <span>KanoFlow • Lịch, Thống kê &amp; Trợ lý AI</span>
                 </div>
 
                 <h2 className="kinetic-from-left k-delay-2">
-                  Nhìn rõ hạn chót trước khi mọi thứ trở nên gấp gáp.
+                  Kiểm soát hạn chót và soi chi tiết từng việc đã hoàn thành.
                 </h2>
 
                 <p className="intro-lead kinetic-from-left k-delay-3">
-                  Ngoài bảng Kanban, hệ thống tự động gom hạn chót vào Lịch Tháng/Tuần/Ngày, vẽ biểu đồ hiệu suất và cảnh báo sớm các đầu việc có nguy cơ trễ tiến độ.
+                  KanoFlow tự động quét nhắc hạn chót, tổng hợp biểu đồ hiệu suất và cho phép chọn từng công việc đã xong để đối chiếu sớm hạn, đúng hạn hay trễ hạn.
                 </p>
 
                 <div className="intro-feature-rows">
                   <div className="intro-feature-row kinetic-from-left k-delay-3">
-                    <strong>Lịch hạn chót &amp; Chế độ Hôm nay</strong>
-                    <p>Tập trung đúng danh sách việc cần xử lý trong ngày và xem tổng quan cả tuần chỉ trong một cú bấm.</p>
+                    <strong>Lịch hạn chót &amp; tự động nhắc việc định kỳ</strong>
+                    <p>Theo dõi deadline theo ngày/tháng, chế độ Hôm nay tập trung và thông báo cảnh báo trước khi trễ hạn.</p>
                   </div>
                   <div className="intro-feature-row kinetic-from-left k-delay-4">
-                    <strong>Thống kê &amp; Cảnh báo rủi ro trễ hạn</strong>
-                    <p>Tự động phát hiện thẻ sắp đến hạn nhưng tiến độ còn thấp để bạn tăng ưu tiên kịp thời.</p>
+                    <strong>Đối chiếu chi tiết tiến độ hoàn thành trong Thống kê</strong>
+                    <p>Chọn bất kỳ công việc nào đã hoàn thành để xem tổng thời gian xử lý, từng bước đã tick, người sửa cuối và bình luận.</p>
                   </div>
                   <div className="intro-feature-row kinetic-from-left k-delay-5">
-                    <strong>Trợ lý lập kế hoạch tích hợp</strong>
-                    <p>Hỗ trợ chia nhỏ công việc lớn thành từng bước và đề xuất thứ tự xử lý theo dữ liệu thật của bạn.</p>
+                    <strong>Trợ lý AI lập kế hoạch theo dữ liệu thật</strong>
+                    <p>Phân tích khối lượng việc đang mở, gợi ý thứ tự ưu tiên và hỗ trợ chia nhỏ đầu việc ngay trong ứng dụng.</p>
                   </div>
                 </div>
               </div>
@@ -584,123 +636,181 @@ function WelcomeShowcase({ onSkipToLogin, onGoToRegister }) {
             </section>
           )}
 
-          {/* ==================== PAGE 4: LIVE THEME CUSTOMIZATION (4 THEMES) ==================== */}
+          {/* ==================== PAGE 4: GRAND FINALE — LIVE THEME STUDIO + LAUNCHPAD ==================== */}
           {step === 3 && (
-            <section className="intro-slide intro-theme-layout">
-              <div className="intro-theme-head">
-                <div className="intro-step-pill kinetic-from-left k-delay-1">
-                  <span>4 / 4</span>
-                  <span>Chọn phong cách làm việc của riêng bạn</span>
+            <section className="intro-slide intro-theme-layout finale-stage">
+              {/* Ambient animated orbital & luminous tech layers (strictly behind interactive controls) */}
+              <div className="finale-ambient-canvas" aria-hidden="true">
+                <div className="finale-grid-bg" />
+                <div className="finale-orb finale-orb-a" />
+                <div className="finale-orb finale-orb-b" />
+                <div className="finale-ring finale-ring-1" />
+                <div className="finale-ring finale-ring-2" />
+                <div className="finale-sparks">
+                  <span style={{ left: "12%", animationDelay: "0s", animationDuration: "7s" }} />
+                  <span style={{ left: "28%", animationDelay: "1.4s", animationDuration: "8.5s" }} />
+                  <span style={{ left: "48%", animationDelay: "0.7s", animationDuration: "6.5s" }} />
+                  <span style={{ left: "69%", animationDelay: "2.1s", animationDuration: "7.8s" }} />
+                  <span style={{ left: "86%", animationDelay: "0.9s", animationDuration: "9s" }} />
                 </div>
-                <h2 className="kinetic-from-left k-delay-2">
-                  Tùy chỉnh giao diện ngay trước khi bắt đầu.
-                </h2>
-                <p className="intro-lead kinetic-from-left k-delay-3">
-                  Chọn chế độ Sáng tinh gọn, Tối sâu, Kính lỏng trong suốt hoặc chủ đề Tết tông cam ấm. Bạn còn có thể đổi ảnh nền và tinh chỉnh sâu từng chủ đề trong Cài đặt.
-                </p>
               </div>
 
-              <div className="intro-theme-picker-grid">
-                {themeOptions.map((opt, idx) => {
-                  const isActive = theme === opt.id;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      className={`intro-theme-card kinetic-pop k-delay-${idx + 2} ${isActive ? "active" : ""}`}
-                      onClick={() => {
-                        setAutoPlay(false);
-                        setTheme(opt.id);
-                      }}
-                    >
-                      <div
-                        className="intro-theme-preview"
-                        style={{
-                          background: opt.previewBg,
-                          borderColor: opt.previewBorder,
-                        }}
-                      >
-                        <div className="preview-sidebar" style={{ background: opt.previewCard }} />
-                        <div className="preview-body">
-                          <div className="preview-bar" style={{ background: opt.previewCard }} />
-                          <div className="preview-cols">
-                            <span style={{ background: opt.previewCard }} />
-                            <span style={{ background: opt.previewCard }} />
-                            <span style={{ background: opt.previewCard }} />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="intro-theme-meta">
-                        <div className="intro-theme-title-row">
-                          <strong>{opt.label}</strong>
-                          {isActive && (
-                            <span className="intro-theme-check">
-                              <Check size={12} strokeWidth={2.5} />
-                            </span>
-                          )}
-                        </div>
-                        <p>{opt.description}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* ACCENT PICKER OR TET EFFECT TOGGLES */}
-              <div className="intro-accent-strip kinetic-from-bottom k-delay-4">
-                <div className="intro-accent-left">
-                  <SlidersHorizontal size={15} strokeWidth={1.85} />
-                  <span>{theme === "tet" ? "Hiệu ứng chủ đề Tết (nằm sau nền)" : "Màu nhấn chủ đạo"}</span>
-                </div>
-
-                {theme === "tet" ? (
-                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                    <label className="intro-tet-toggle">
-                      <input
-                        type="checkbox"
-                        checked={tetEffectsEnabled}
-                        onChange={(e) => setTetEffectsEnabled(e.target.checked)}
-                      />
-                      <span>Bao lì xì rơi</span>
-                    </label>
-                    <label className="intro-tet-toggle">
-                      <input
-                        type="checkbox"
-                        checked={tetWishesEnabled}
-                        onChange={(e) => setTetWishesEnabled(e.target.checked)}
-                      />
-                      <span>Câu chúc Tết rơi</span>
-                    </label>
+              <div className="finale-foreground">
+                <div className="intro-theme-head finale-head">
+                  <div className="intro-step-pill kinetic-from-left k-delay-1">
+                    <span>4 / 4</span>
+                    <span>KanoFlow • Trạm Khởi Hành</span>
                   </div>
-                ) : (
-                  <div className="intro-accent-dots">
-                    {accentOptions.map((item) => (
+                  <h2 className="kinetic-from-left k-delay-2">
+                    Chọn phong cách <span className="intro-headline-accent">KanoFlow</span> và bắt đầu ngay.
+                  </h2>
+                  <p className="intro-lead kinetic-from-left k-delay-3">
+                    Chạm để đổi trực tiếp 4 chủ đề (gồm <strong>Kính lỏng siêu trong suốt</strong> và <strong>Tết tông cam ấm</strong>), tinh chỉnh màu nhấn, sau đó chọn cổng <strong>Đăng nhập</strong> hoặc <strong>Đăng ký</strong> riêng biệt bên dưới.
+                  </p>
+                </div>
+
+                {/* 4 INTERACTIVE THEME CARDS WITH HOVER SHINE */}
+                <div className="intro-theme-picker-grid">
+                  {themeOptions.map((opt, idx) => {
+                    const isActive = theme === opt.id;
+                    return (
                       <button
-                        key={item.id}
+                        key={opt.id}
                         type="button"
-                        className={`intro-accent-dot ${accent === item.id ? "selected" : ""}`}
-                        style={{ background: item.color }}
-                        title={item.label}
+                        className={`intro-theme-card finale-theme-card kinetic-pop k-delay-${idx + 1} ${
+                          isActive ? "active" : ""
+                        }`}
                         onClick={() => {
                           setAutoPlay(false);
-                          setAccent(item.id);
+                          setTheme(opt.id);
                         }}
                       >
-                        {accent === item.id && <Check size={13} strokeWidth={2.8} color="#fff" />}
+                        <div
+                          className="intro-theme-preview"
+                          style={{
+                            background: opt.previewBg,
+                            borderColor: opt.previewBorder,
+                          }}
+                        >
+                          <div className="preview-sidebar" style={{ background: opt.previewCard }} />
+                          <div className="preview-body">
+                            <div className="preview-bar" style={{ background: opt.previewCard }} />
+                            <div className="preview-cols">
+                              <span style={{ background: opt.previewCard }} />
+                              <span style={{ background: opt.previewCard }} />
+                              <span style={{ background: opt.previewCard }} />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="intro-theme-meta">
+                          <div className="intro-theme-title-row">
+                            <strong>{opt.label}</strong>
+                            {isActive && (
+                              <span className="intro-theme-check">
+                                <Check size={12} strokeWidth={2.5} />
+                              </span>
+                            )}
+                          </div>
+                          <p>{opt.description}</p>
+                        </div>
                       </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    );
+                  })}
+                </div>
 
-              {/* FINAL LAUNCH BAR */}
-              <div className="intro-final-cta kinetic-from-bottom k-delay-5">
-                <button type="button" className="btn btn-primary intro-btn-lg" onClick={onSkipToLogin}>
-                  Vào trang Đăng nhập
-                </button>
-                <button type="button" className="btn btn-secondary intro-btn-lg" onClick={onGoToRegister}>
-                  Đăng ký tài khoản mới
-                </button>
+                {/* ACCENT PICKER OR TET EFFECT TOGGLES */}
+                <div className="intro-accent-strip kinetic-from-bottom k-delay-3">
+                  <div className="intro-accent-left">
+                    <SlidersHorizontal size={15} strokeWidth={1.85} />
+                    <span>{theme === "tet" ? "Hiệu ứng chủ đề Tết (nằm sau nền)" : "Màu nhấn đồng bộ toàn hệ thống"}</span>
+                  </div>
+
+                  {theme === "tet" ? (
+                    <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                      <label className="intro-tet-toggle">
+                        <input
+                          type="checkbox"
+                          checked={tetEffectsEnabled}
+                          onChange={(e) => setTetEffectsEnabled(e.target.checked)}
+                        />
+                        <span>Bao lì xì rơi</span>
+                      </label>
+                      <label className="intro-tet-toggle">
+                        <input
+                          type="checkbox"
+                          checked={tetWishesEnabled}
+                          onChange={(e) => setTetWishesEnabled(e.target.checked)}
+                        />
+                        <span>Câu chúc Tết rơi</span>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="intro-accent-dots">
+                      {accentOptions.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`intro-accent-dot ${accent === item.id ? "selected" : ""}`}
+                          style={{ background: item.color }}
+                          title={item.label}
+                          onClick={() => {
+                            setAutoPlay(false);
+                            setAccent(item.id);
+                          }}
+                        >
+                          {accent === item.id && <Check size={13} strokeWidth={2.8} color="#fff" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* LUMINOUS LAUNCHPAD WITH SEPARATE LOGIN & REGISTER GATEWAYS */}
+                <div className="finale-launch-frame kinetic-from-bottom k-delay-4">
+                  <div className="finale-launch-beam" aria-hidden="true" />
+                  <div className="finale-launch-inner">
+                    <div className="finale-launch-brand">
+                      <BrandLogo size="lg" animated subtitle="Sẵn sàng vận hành đội nhóm của bạn" />
+                      <div className="finale-capability-pills">
+                        <span><Zap size={12} /> Socket.io Realtime</span>
+                        <span><ShieldCheck size={12} /> Bảo mật JWT + OTP</span>
+                        <span><Layers size={12} /> 4 Chủ đề + Ảnh nền</span>
+                      </div>
+                    </div>
+
+                    <div className="finale-gateway-cards">
+                      <button
+                        type="button"
+                        className="finale-gateway-btn is-primary"
+                        onClick={onSkipToLogin}
+                      >
+                        <div className="finale-gw-icon">
+                          <LogIn size={18} strokeWidth={2} />
+                        </div>
+                        <div className="finale-gw-copy">
+                          <strong>Trang Đăng nhập</strong>
+                          <span>Đã có tài khoản KanoFlow</span>
+                        </div>
+                        <ArrowRight size={16} className="finale-gw-arrow" />
+                      </button>
+
+                      <button
+                        type="button"
+                        className="finale-gateway-btn is-secondary"
+                        onClick={onGoToRegister}
+                      >
+                        <div className="finale-gw-icon">
+                          <UserPlus size={18} strokeWidth={2} />
+                        </div>
+                        <div className="finale-gw-copy">
+                          <strong>Trang Đăng ký</strong>
+                          <span>Tạo tài khoản &amp; không gian mới</span>
+                        </div>
+                        <ArrowRight size={16} className="finale-gw-arrow" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
           )}

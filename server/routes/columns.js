@@ -7,6 +7,13 @@ const { emitBoardEvent } = require("../socket");
 const router = express.Router();
 router.use(authenticateToken);
 
+function normalizeWipLimit(raw) {
+  if (raw === undefined || raw === null || raw === "") return null;
+  const n = Math.floor(Number(raw));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.min(99, n);
+}
+
 // ==================================================
 // 1. POST /api/boards/:boardId/columns — Tạo cột trạng thái mới
 // ==================================================
@@ -22,7 +29,7 @@ router.post("/boards/:boardId/columns", async (req, res) => {
       return res.status(403).json({ message: "Bạn không có quyền truy cập không gian làm việc này!" });
     }
 
-    const { title, color, isDone } = req.body;
+    const { title, color, isDone, wipLimit } = req.body;
     if (!title || typeof title !== "string" || title.trim() === "") {
       return res.status(400).json({ message: "Tên cột không được để trống!" });
     }
@@ -34,6 +41,7 @@ router.post("/boards/:boardId/columns", async (req, res) => {
       title: title.trim(),
       color: color && /^#[0-9A-Fa-f]{6}$/.test(color) ? color : "#64748b",
       isDone: Boolean(isDone),
+      wipLimit: normalizeWipLimit(wipLimit),
       position: existingCount,
       createdAt: new Date(),
     });
@@ -58,6 +66,9 @@ router.post("/boards/:boardId/columns", async (req, res) => {
 router.put("/columns/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ message: "ID cột không hợp lệ!" });
+    }
     const column = await BoardColumn.findByPk(id);
     if (!column) {
       return res.status(404).json({ message: "Không tìm thấy cột!" });
@@ -68,7 +79,7 @@ router.put("/columns/:id", async (req, res) => {
       return res.status(403).json({ message: "Bạn không có quyền chỉnh sửa cột này!" });
     }
 
-    const { title, color, isDone } = req.body;
+    const { title, color, isDone, wipLimit } = req.body;
     if (title !== undefined && (typeof title !== "string" || title.trim() === "")) {
       return res.status(400).json({ message: "Tên cột không được để trống!" });
     }
@@ -77,6 +88,7 @@ router.put("/columns/:id", async (req, res) => {
       title: title !== undefined ? title.trim() : column.title,
       color: color && /^#[0-9A-Fa-f]{6}$/.test(color) ? color : column.color,
       isDone: isDone !== undefined ? Boolean(isDone) : column.isDone,
+      wipLimit: wipLimit !== undefined ? normalizeWipLimit(wipLimit) : column.wipLimit,
     });
 
     emitBoardEvent(column.boardId, "column:updated", {
@@ -101,6 +113,9 @@ router.put("/columns/:id", async (req, res) => {
 router.patch("/boards/:boardId/columns/reorder", async (req, res) => {
   try {
     const boardId = Number(req.params.boardId);
+    if (!Number.isInteger(boardId)) {
+      return res.status(400).json({ message: "ID Board không hợp lệ!" });
+    }
     const allowed = await canAccessBoard(boardId, req.user.id);
     if (!allowed) {
       return res.status(403).json({ message: "Không có quyền thao tác trên bảng này!" });
@@ -142,6 +157,9 @@ router.patch("/boards/:boardId/columns/reorder", async (req, res) => {
 router.delete("/columns/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ message: "ID cột không hợp lệ!" });
+    }
     const column = await BoardColumn.findByPk(id);
     if (!column) {
       return res.status(404).json({ message: "Không tìm thấy cột!" });

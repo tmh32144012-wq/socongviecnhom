@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useDeferredValue, memo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -15,11 +15,14 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { MessageSquare, Download, Printer, Plus, AlertTriangle, RotateCcw } from "lucide-react";
 import UserAvatar from "./UserAvatar";
 import BoardMembersModal from "./BoardMembersModal";
 import BoardCollabPanel from "./BoardCollabPanel";
 import { exportTasksToCsv, printTasksReportPdf } from "../utils/exportReport";
 import "./Kanban.css";
+
+const EMPTY_ARRAY = [];
 
 const COLUMN_COLORS = [
   "#64748b",
@@ -34,7 +37,7 @@ const COLUMN_COLORS = [
 // =====================================================
 // SORTABLE KANBAN CARD
 // =====================================================
-function KanbanCard({
+const KanbanCard = memo(function KanbanCard({
   task,
   category,
   onOpenTask,
@@ -234,7 +237,7 @@ function KanbanCard({
       </div>
     </div>
   );
-}
+});
 
 // =====================================================
 // DYNAMIC KANBAN COLUMN
@@ -264,6 +267,11 @@ function KanbanColumn({
   const [editTitle, setEditTitle] = useState(column.title);
   const [editColor, setEditColor] = useState(column.color || "#64748b");
   const [editIsDone, setEditIsDone] = useState(Boolean(column.isDone));
+  const [editWipLimit, setEditWipLimit] = useState(column.wipLimit ? String(column.wipLimit) : "");
+
+  const wipLimit = column.wipLimit && Number(column.wipLimit) > 0 ? Number(column.wipLimit) : null;
+  const isOverWip = Boolean(wipLimit && tasks.length > wipLimit);
+  const isAtWip = Boolean(wipLimit && tasks.length === wipLimit);
 
   const [quickAdding, setQuickAdding] = useState(false);
   const [quickTitle, setQuickTitle] = useState("");
@@ -283,10 +291,12 @@ function KanbanColumn({
   const handleSaveColumnEdit = async (e) => {
     e.preventDefault();
     if (!editTitle.trim()) return;
+    const parsedWip = editWipLimit.trim() ? Math.max(0, Math.min(99, Number(editWipLimit))) : null;
     await onUpdateColumn(column.id, {
       title: editTitle.trim(),
       color: editColor,
       isDone: editIsDone,
+      wipLimit: parsedWip && parsedWip > 0 ? parsedWip : null,
     });
     setEditing(false);
   };
@@ -308,7 +318,7 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`kanban-column ${isOver ? "kanban-column-over" : ""}`}
+      className={`kanban-column ${isOver ? "kanban-column-over" : ""} ${isOverWip ? "kanban-column-over-wip" : ""}`}
     >
       <div className="kanban-column-header">
         {editing ? (
@@ -330,6 +340,17 @@ function KanbanColumn({
                 />
               ))}
             </div>
+            <label className="kanban-wip-input-row">
+              <span>Giới hạn WIP (trống = không giới hạn):</span>
+              <input
+                type="number"
+                min="1"
+                max="99"
+                placeholder="VD: 5"
+                value={editWipLimit}
+                onChange={(e) => setEditWipLimit(e.target.value)}
+              />
+            </label>
             <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-secondary)" }}>
               <input
                 type="checkbox"
@@ -358,7 +379,16 @@ function KanbanColumn({
               />
               <h3 title={column.title}>{column.title}</h3>
               {column.isDone && <span className="kanban-column-done-tag">Done</span>}
-              <span className="kanban-column-count">{tasks.length}</span>
+              <span
+                className={`kanban-column-count ${isOverWip ? "is-over-wip" : isAtWip ? "is-at-wip" : ""}`}
+                title={
+                  wipLimit
+                    ? `Giới hạn WIP: ${tasks.length}/${wipLimit} thẻ`
+                    : `${tasks.length} thẻ công việc`
+                }
+              >
+                {wipLimit ? `${tasks.length}/${wipLimit}` : tasks.length}
+              </span>
             </div>
 
             <div className="kanban-col-actions">
@@ -395,11 +425,12 @@ function KanbanColumn({
                       setEditTitle(column.title);
                       setEditColor(column.color || "#64748b");
                       setEditIsDone(Boolean(column.isDone));
+                      setEditWipLimit(column.wipLimit ? String(column.wipLimit) : "");
                       setEditing(true);
                       setMenuOpen(false);
                     }}
                   >
-                    Đổi tên & màu cột
+                    Sửa tên, màu &amp; WIP Limit
                   </button>
                   {colIndex > 0 && (
                     <button
@@ -441,6 +472,13 @@ function KanbanColumn({
           </>
         )}
       </div>
+
+      {isOverWip && (
+        <div className="kanban-wip-alert" role="status">
+          <AlertTriangle size={13} strokeWidth={2} />
+          <span>Vượt giới hạn WIP (+{tasks.length - wipLimit} thẻ) — nên xử lý bớt trước khi nhận thêm</span>
+        </div>
+      )}
 
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <div className="kanban-column-tasks">
@@ -561,7 +599,9 @@ function Kanban({
   const [searchQuery, setSearchQuery] = useState("");
   const [memberFilter, setMemberFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [labelFilter, setLabelFilter] = useState("all");
   const [onlyMyTasks, setOnlyMyTasks] = useState(false);
+  const [onlyOverdue, setOnlyOverdue] = useState(false);
 
   const [activeDragTask, setActiveDragTask] = useState(null);
   const [membersModalOpen, setMembersModalOpen] = useState(false);
@@ -572,6 +612,7 @@ function Kanban({
   const [newColTitle, setNewColTitle] = useState("");
   const [newColColor, setNewColColor] = useState("#0f766e");
   const [newColIsDone, setNewColIsDone] = useState(false);
+  const [newColWipLimit, setNewColWipLimit] = useState("");
   const [creatingCol, setCreatingCol] = useState(false);
 
   const sensors = useSensors(
@@ -580,22 +621,54 @@ function Kanban({
   );
 
   const board = activeBoardData?.board || null;
-  const members = activeBoardData?.members || [];
+  const members = activeBoardData?.members ?? EMPTY_ARRAY;
   const acceptedMembers = useMemo(
     () => members.filter((m) => m.status === "accepted"),
     [members]
   );
-  const columns = activeBoardData?.columns || [];
-  const boardTasks = activeBoardData?.tasks || [];
+  const columns = activeBoardData?.columns ?? EMPTY_ARRAY;
+  const boardTasks = activeBoardData?.tasks ?? EMPTY_ARRAY;
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
   const isAdmin = board?.myRole === "owner" || board?.myRole === "admin";
 
+  const availableLabels = useMemo(() => {
+    const map = new Map();
+    boardTasks.forEach((t) => {
+      (t.labels || []).forEach((lb) => {
+        if (lb && !map.has(lb.id)) map.set(lb.id, lb);
+      });
+    });
+    return [...map.values()];
+  }, [boardTasks]);
+
+  const hasActiveFilters = Boolean(
+    searchQuery.trim() ||
+      memberFilter !== "all" ||
+      priorityFilter !== "all" ||
+      labelFilter !== "all" ||
+      onlyMyTasks ||
+      onlyOverdue
+  );
+
+  const resetAllFilters = () => {
+    setSearchQuery("");
+    setMemberFilter("all");
+    setPriorityFilter("all");
+    setLabelFilter("all");
+    setOnlyMyTasks(false);
+    setOnlyOverdue(false);
+  };
+
   const filteredTasks = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     return boardTasks.filter((task) => {
       if (task.isArchived) return false;
 
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
+      if (deferredSearchQuery.trim()) {
+        const q = deferredSearchQuery.toLowerCase().trim();
         const matchText =
           (task.title || "").toLowerCase().includes(q) ||
           (task.description || "").toLowerCase().includes(q);
@@ -604,6 +677,19 @@ function Kanban({
 
       if (priorityFilter !== "all" && task.priority !== priorityFilter) {
         return false;
+      }
+
+      if (labelFilter !== "all") {
+        const hasLabel = (task.labels || []).some((lb) => Number(lb.id) === Number(labelFilter));
+        if (!hasLabel) return false;
+      }
+
+      if (onlyOverdue) {
+        const isDone = task.status === "Hoàn thành" || task.progress === 100;
+        if (isDone || !task.dueDate) return false;
+        const due = new Date(task.dueDate);
+        due.setHours(0, 0, 0, 0);
+        if (!(due < today)) return false;
       }
 
       if (onlyMyTasks && currentUser) {
@@ -627,7 +713,7 @@ function Kanban({
 
       return true;
     });
-  }, [boardTasks, searchQuery, priorityFilter, onlyMyTasks, memberFilter, currentUser]);
+  }, [boardTasks, deferredSearchQuery, priorityFilter, labelFilter, onlyOverdue, onlyMyTasks, memberFilter, currentUser]);
 
   const tasksByColumn = useMemo(() => {
     const grouped = {};
@@ -708,13 +794,18 @@ function Kanban({
     if (!newColTitle.trim() || !board) return;
     try {
       setCreatingCol(true);
+      const parsedWip = newColWipLimit.trim()
+        ? Math.max(0, Math.min(99, Number(newColWipLimit)))
+        : null;
       await onCreateColumn(board.id, {
         title: newColTitle.trim(),
         color: newColColor,
         isDone: newColIsDone,
+        wipLimit: parsedWip && parsedWip > 0 ? parsedWip : null,
       });
       setNewColTitle("");
       setNewColIsDone(false);
+      setNewColWipLimit("");
       setAddingColumn(false);
     } finally {
       setCreatingCol(false);
@@ -814,7 +905,8 @@ function Kanban({
             onClick={() => setCollabPanelOpen(true)}
             title="Chat nhóm, Nhật ký hoạt động & Nhãn chung"
           >
-            💬 Chat & Nhật ký
+            <MessageSquare size={14} strokeWidth={1.9} aria-hidden="true" />
+            <span>Chat &amp; Nhật ký</span>
           </button>
 
           <button
@@ -826,7 +918,8 @@ function Kanban({
             }}
             title="Xuất danh sách thẻ ra file CSV mở bằng Excel"
           >
-            📥 CSV
+            <Download size={14} strokeWidth={1.9} aria-hidden="true" />
+            <span>CSV</span>
           </button>
 
           <button
@@ -835,7 +928,8 @@ function Kanban({
             onClick={() => printTasksReportPdf(filteredTasks, `Báo Cáo Bảng: ${board.name}`)}
             title="In hoặc lưu báo cáo tiến độ dạng PDF"
           >
-            🖨️ PDF
+            <Printer size={14} strokeWidth={1.9} aria-hidden="true" />
+            <span>PDF</span>
           </button>
 
           <button
@@ -858,11 +952,8 @@ function Kanban({
             className="btn btn-primary"
             onClick={() => onOpenCreateTaskModal(board.id, columns[0]?.id || null)}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Thêm thẻ mới
+            <Plus size={15} strokeWidth={2.2} aria-hidden="true" />
+            <span>Thêm thẻ mới</span>
           </button>
         </div>
       </div>
@@ -886,6 +977,7 @@ function Kanban({
             <button
               type="button"
               className="kanban-clear-btn"
+              aria-label="Xóa từ khóa tìm kiếm"
               onClick={() => setSearchQuery("")}
             >
               ×
@@ -920,6 +1012,21 @@ function Kanban({
             <option value="Thấp">Thấp</option>
           </select>
 
+          {availableLabels.length > 0 && (
+            <select
+              value={labelFilter}
+              onChange={(e) => setLabelFilter(e.target.value)}
+              aria-label="Lọc theo nhãn bảng"
+            >
+              <option value="all">Mọi nhãn</option>
+              {availableLabels.map((lb) => (
+                <option key={lb.id} value={lb.id}>
+                  Nhãn: {lb.name}
+                </option>
+              ))}
+            </select>
+          )}
+
           <button
             type="button"
             className={`kanban-my-tasks-btn ${onlyMyTasks ? "active" : ""}`}
@@ -927,6 +1034,26 @@ function Kanban({
           >
             Việc của tôi
           </button>
+
+          <button
+            type="button"
+            className={`kanban-my-tasks-btn kanban-overdue-btn ${onlyOverdue ? "active" : ""}`}
+            onClick={() => setOnlyOverdue((prev) => !prev)}
+          >
+            Quá hạn
+          </button>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="kanban-reset-filter-btn"
+              onClick={resetAllFilters}
+              title={`Đang hiện ${filteredTasks.length}/${boardTasks.length} thẻ`}
+            >
+              <RotateCcw size={13} strokeWidth={2} />
+              <span>Xóa lọc ({filteredTasks.length}/{boardTasks.length})</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -984,6 +1111,17 @@ function Kanban({
                     />
                   ))}
                 </div>
+                <label className="kanban-wip-input-row">
+                  <span>Giới hạn WIP (để trống = không giới hạn):</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    placeholder="VD: 5"
+                    value={newColWipLimit}
+                    onChange={(e) => setNewColWipLimit(e.target.value)}
+                  />
+                </label>
                 <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--text-secondary)" }}>
                   <input
                     type="checkbox"

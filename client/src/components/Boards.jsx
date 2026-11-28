@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   Plus,
   Mail,
@@ -304,8 +305,9 @@ function Boards({
       )}
 
       {/* MODAL TẠO / SỬA BOARD */}
-      {modalOpen && (
-        <div className="team-modal-backdrop" onClick={() => setModalOpen(false)}>
+      {modalOpen &&
+        createPortal(
+          <div className="team-modal-backdrop" onClick={() => setModalOpen(false)}>
           <div className="team-modal" onClick={(e) => e.stopPropagation()}>
             <div className="team-modal-header">
               <h2>{editingBoard ? "Chỉnh sửa không gian làm việc" : "Tạo không gian làm việc mới"}</h2>
@@ -380,7 +382,8 @@ function Boards({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

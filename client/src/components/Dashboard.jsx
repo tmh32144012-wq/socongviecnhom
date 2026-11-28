@@ -46,18 +46,6 @@ function Dashboard({
     setCurrentPage("status");
   };
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const formatDate = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  const todayString = formatDate(today);
-
   const greetingLabel = useMemo(() => {
     const hour = new Date().getHours();
     if (hour < 12) return "Chào buổi sáng";
@@ -85,8 +73,12 @@ function Dashboard({
     highPriorityTasks,
     overallProgress,
     riskyTasks,
+    upcomingList,
+    overdueList,
   } = useMemo(() => {
-    const sevenDaysLater = new Date(today);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const sevenDaysLater = new Date(todayStart);
     sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
 
     let completed = 0;
@@ -98,6 +90,8 @@ function Dashboard({
     let highPriority = 0;
     let totalPct = 0;
     const atRisk = [];
+    const upcomingBucket = [];
+    const overdueBucket = [];
 
     tasks.forEach((task) => {
       const progress = getTaskProgress(task);
@@ -110,19 +104,22 @@ function Dashboard({
         const due = new Date(task.dueDate);
         due.setHours(0, 0, 0, 0);
 
-        if (!isCompleted && due < today) {
+        if (!isCompleted && due < todayStart) {
           isOverdue = true;
           overdue++;
+          overdueBucket.push(task);
+        } else if (!isCompleted && due >= todayStart) {
+          upcomingBucket.push(task);
         }
 
-        if (due.getTime() === today.getTime()) {
+        if (due.getTime() === todayStart.getTime()) {
           dueToday++;
-        } else if (due > today && due <= sevenDaysLater) {
+        } else if (due > todayStart && due <= sevenDaysLater) {
           upcoming++;
         }
 
         if (!isCompleted && !isOverdue) {
-          const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+          const diffDays = Math.ceil((due - todayStart) / (1000 * 60 * 60 * 24));
           if ((diffDays <= 2 && progress < 50) || (diffDays <= 4 && progress < 25)) {
             atRisk.push({
               ...task,
@@ -165,8 +162,14 @@ function Dashboard({
       highPriorityTasks: highPriority,
       overallProgress: overall,
       riskyTasks: atRisk,
+      upcomingList: upcomingBucket
+        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+        .slice(0, 5),
+      overdueList: overdueBucket
+        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+        .slice(0, 5),
     };
-  }, [tasks, todayString]);
+  }, [tasks, getTaskProgress]);
 
   const handleUpgradePriority = async (task) => {
     const newPriority =
@@ -177,32 +180,6 @@ function Dashboard({
         : "Cao";
     await updateTask(task.id, { priority: newPriority });
   };
-
-  const upcomingList = useMemo(() => {
-    return tasks
-      .filter(
-        (t) =>
-          t.dueDate &&
-          t.status !== "Hoàn thành" &&
-          t.progress !== 100 &&
-          new Date(t.dueDate) >= today
-      )
-      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-      .slice(0, 5);
-  }, [tasks, todayString]);
-
-  const overdueList = useMemo(() => {
-    return tasks
-      .filter(
-        (t) =>
-          t.dueDate &&
-          t.status !== "Hoàn thành" &&
-          t.progress !== 100 &&
-          new Date(t.dueDate) < today
-      )
-      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-      .slice(0, 5);
-  }, [tasks, todayString]);
 
   const highPriorityList = useMemo(() => {
     return tasks

@@ -2,11 +2,61 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const authenticateToken = require("../middleware/auth");
-const { Task, Category } = require("../models");
+const { Task, Category, AiChatSession, Op } = require("../models");
 const { buildAccessibleTasksWhere } = require("../utils/boardAccess");
 
 const router = express.Router();
 router.use(authenticateToken);
+
+const MAX_AI_SESSIONS_PER_USER = 3;
+const MAX_MESSAGES_PER_SESSION = 80;
+
+function parseSessionMessages(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function serializeSession(row) {
+  if (!row) return null;
+  const plain = typeof row.toJSON === "function" ? row.toJSON() : row;
+  return {
+    id: plain.id,
+    userId: plain.userId,
+    title: plain.title || "Cuộc trò chuyện mới",
+    messages: parseSessionMessages(plain.messagesJson),
+    createdAt: plain.createdAt,
+    updatedAt: plain.updatedAt,
+  };
+}
+
+function deriveSessionTitle(text) {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  if (!clean) return "Cuộc trò chuyện mới";
+  return clean.length > 56 ? `${clean.slice(0, 56)}…` : clean;
+}
+
+async function getAndPruneUserSessions(userId) {
+  const rows = await AiChatSession.findAll({
+    where: { userId },
+    order: [["updatedAt", "DESC"], ["id", "DESC"]],
+  });
+
+  if (rows.length > MAX_AI_SESSIONS_PER_USER) {
+    const staleIds = rows.slice(MAX_AI_SESSIONS_PER_USER).map((r) => r.id);
+    if (staleIds.length > 0) {
+      await AiChatSession.destroy({
+        where: { id: { [Op.in]: staleIds }, userId },
+      });
+    }
+  }
+
+  return rows.slice(0, MAX_AI_SESSIONS_PER_USER).map(serializeSession);
+}
 
 // ==================================================
 // AI CONFIGURATION — loaded from environment variables (mutable)
@@ -139,16 +189,107 @@ router.post("/config", async (req, res) => {
 });
 
 // ==================================================
-// POST /api/ai/chat — Send message to AI
-// Body: { message: string, history?: Array<{role, content}> }
+// GET /api/ai/sessions — Lấy 3 cuộc trò chuyện gần nhất của đúng tài khoản hiện tại
+// ==================================================
+router.get("/sessions", async (req, res) => {
+  try {
+    const sessions = await getAndPruneUserSessions(req.user.id);
+    return res.json({ success: true, sessions });
+  } catch (error) {
+    console.error("Lỗi lấy lịch sử AI chat:", error);
+    return res.status(500).json({ success: false, message: "Không thể tải lịch sử trò chuyện AI!" });
+  }
+});
+
+// ==================================================
+// POST /api/ai/sessions — Tạo phiên trò chuyện mới (tự động giữ tối đa 3 phiên gần nhất)
+// ==================================================
+router.post("/sessions", async (req, res) => {
+  try {
+    const now = new Date();
+    const title = deriveSessionTitle(req.body?.title || "Cuộc trò chuyện mới");
+    const created = await AiChatSession.create({
+      userId: req.user.id,
+      title,
+      messagesJson: "[]",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const sessions = await getAndPruneUserSessions(req.user.id);
+    return res.status(201).json({
+      success: true,
+      session: serializeSession(created),
+      sessions,
+    });
+  } catch (error) {
+    console.error("Lỗi tạo phiên AI chat:", error);
+    return res.status(500).json({ success: false, message: "Không thể tạo cuộc trò chuyện mới!" });
+  }
+});
+
+// ==================================================
+// DELETE /api/ai/sessions/:id — Xóa một phiên trò chuyện thuộc tài khoản hiện tại
+// ==================================================
+router.delete("/sessions/:id", async (req, res) => {
+  try {
+    const sessionId = Number(req.params.id);
+    if (!Number.isInteger(sessionId)) {
+      return res.status(400).json({ success: false, message: "ID cuộc trò chuyện không hợp lệ!" });
+    }
+
+    const deletedCount = await AiChatSession.destroy({
+      where: { id: sessionId, userId: req.user.id },
+    });
+    if (!deletedCount) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy cuộc trò chuyện!" });
+    }
+
+    const sessions = await getAndPruneUserSessions(req.user.id);
+    return res.json({ success: true, sessions });
+  } catch (error) {
+    console.error("Lỗi xóa phiên AI chat:", error);
+    return res.status(500).json({ success: false, message: "Không thể xóa cuộc trò chuyện!" });
+  }
+});
+
+// ==================================================
+// POST /api/ai/chat — Send message to AI & persist into user's 3-session history
+// Body: { message: string, history?: Array<{role, content}>, sessionId?: number }
 // ==================================================
 router.post("/chat", async (req, res) => {
   try {
-    const { message, history } = req.body;
+    const { message, history, sessionId } = req.body;
 
     if (!message || typeof message !== "string" || message.trim() === "") {
       return res.status(400).json({ success: false, message: "Vui lòng nhập câu hỏi!" });
     }
+
+    const trimmedMessage = message.trim();
+
+    // Tải hoặc tạo mới phiên trò chuyện của đúng user hiện tại
+    let session = null;
+    if (sessionId && Number.isInteger(Number(sessionId))) {
+      session = await AiChatSession.findOne({
+        where: { id: Number(sessionId), userId: req.user.id },
+      });
+    }
+    if (!session) {
+      const now = new Date();
+      session = await AiChatSession.create({
+        userId: req.user.id,
+        title: deriveSessionTitle(trimmedMessage),
+        messagesJson: "[]",
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    const existingMessages = parseSessionMessages(session.messagesJson);
+    const effectiveHistory =
+      Array.isArray(history) && history.length > 0
+        ? history
+        : existingMessages.map((m) => ({ role: m.role, content: m.content }));
 
     // Fetch user's real task data (personal + team boards)
     const taskWhere = await buildAccessibleTasksWhere(req.user.id, { isArchived: false });
@@ -172,37 +313,51 @@ router.post("/chat", async (req, res) => {
     const taskSummary = buildTaskSummary(tasks, categories, today);
     const systemPrompt = buildSystemPrompt(taskSummary);
 
-    // ==================================================
-    // If AI is configured, call real API
-    // ==================================================
+    let reply = "";
+    let source = "local";
+
     if (AI_API_KEY) {
       try {
-        let aiResponse;
-
         if (AI_PROVIDER === "openai") {
-          aiResponse = await callOpenAI(systemPrompt, message, AI_API_KEY, AI_MODEL_OPENAI, history);
+          reply = await callOpenAI(systemPrompt, trimmedMessage, AI_API_KEY, AI_MODEL_OPENAI, effectiveHistory);
         } else {
-          aiResponse = await callGemini(systemPrompt, message, AI_API_KEY, AI_MODEL_GEMINI, history);
+          reply = await callGemini(systemPrompt, trimmedMessage, AI_API_KEY, AI_MODEL_GEMINI, effectiveHistory);
         }
-
-        return res.json({ success: true, reply: aiResponse, source: "ai" });
+        source = "ai";
       } catch (aiError) {
         console.error("AI API error:", aiError.message);
-        // Fallback to rule-based if AI fails
-        const fallbackReply = generateRuleBasedReply(message, tasks, categories, today);
-        return res.json({
-          success: true,
-          reply: fallbackReply + "\n\n_(Lưu ý: AI Cloud tạm thời không phản hồi, đang dùng bộ máy phân tích nội bộ)_",
-          source: "fallback",
-        });
+        const fallbackReply = generateRuleBasedReply(trimmedMessage, tasks, categories, today);
+        reply = fallbackReply + "\n\n_(Lưu ý: AI Cloud tạm thời không phản hồi, đang dùng bộ máy phân tích nội bộ)_";
+        source = "fallback";
       }
+    } else {
+      reply = generateRuleBasedReply(trimmedMessage, tasks, categories, today);
+      source = "local";
     }
 
-    // ==================================================
-    // No API key — use smart local planner & analyzer
-    // ==================================================
-    const reply = generateRuleBasedReply(message, tasks, categories, today);
-    return res.json({ success: true, reply, source: "local" });
+    // Lưu tin nhắn user + phản hồi AI vào SQL Server và giữ tối đa 3 đoạn gần nhất cho tài khoản này
+    const nowIso = new Date().toISOString();
+    const updatedMessages = [
+      ...existingMessages,
+      { role: "user", content: trimmedMessage, timestamp: nowIso },
+      { role: "assistant", content: reply, source, timestamp: nowIso },
+    ].slice(-MAX_MESSAGES_PER_SESSION);
+
+    if (!session.title || session.title === "Cuộc trò chuyện mới") {
+      session.title = deriveSessionTitle(trimmedMessage);
+    }
+    session.messagesJson = JSON.stringify(updatedMessages);
+    session.updatedAt = new Date();
+    await session.save();
+
+    const sessions = await getAndPruneUserSessions(req.user.id);
+    return res.json({
+      success: true,
+      reply,
+      source,
+      session: serializeSession(session),
+      sessions,
+    });
   } catch (error) {
     console.error("Lỗi AI chat:", error);
     res.status(500).json({ success: false, message: "Không thể xử lý yêu cầu!" });

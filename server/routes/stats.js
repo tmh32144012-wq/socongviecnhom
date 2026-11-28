@@ -1,5 +1,5 @@
 const express = require("express");
-const { Task, Category, Op } = require("../models");
+const { Task, Category, TaskAssignee, User, Op } = require("../models");
 const authenticateToken = require("../middleware/auth");
 const { buildAccessibleTasksWhere, canAccessBoard } = require("../utils/boardAccess");
 
@@ -74,18 +74,34 @@ router.get("/", async (req, res) => {
       baseWhere = await buildAccessibleTasksWhere(userId, { isArchived: false });
     }
 
-    const tasks = await Task.findAll({
-      where: {
-        [Op.and]: [baseWhere, dateFilter],
-      },
-      attributes: [
-        "id", "title", "status", "priority", "startDate",
-        "dueDate", "progress", "categoryId", "boardId", "createdAt", "updatedAt",
-      ],
-    });
-
     const archivedWhere = await buildAccessibleTasksWhere(userId, { isArchived: true });
-    const archivedCount = await Task.count({ where: archivedWhere });
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+
+    // Chạy song song 4 truy vấn SQL độc lập (Promise.all) để giảm mạnh độ trễ TTFB
+    const [tasks, archivedCount, categories, allRecentTasks] = await Promise.all([
+      Task.findAll({
+        where: { [Op.and]: [baseWhere, dateFilter] },
+        attributes: [
+          "id", "title", "status", "priority", "startDate",
+          "dueDate", "progress", "categoryId", "boardId", "createdAt", "updatedAt",
+        ],
+      }),
+      Task.count({ where: archivedWhere }),
+      Category.findAll({
+        where: { userId },
+        attributes: ["id", "name", "color"],
+      }),
+      Task.findAll({
+        where: {
+          [Op.and]: [
+            baseWhere,
+            { status: "Hoàn thành", updatedAt: { [Op.gte]: thirtyDaysAgo } },
+          ],
+        },
+        attributes: ["id", "updatedAt"],
+      }),
+    ]);
 
     const sevenDaysLater = new Date(today);
     sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
@@ -148,11 +164,6 @@ router.get("/", async (req, res) => {
     const completionRate = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
     const averageProgress = totalTasks > 0 ? Math.round(totalProgress / totalTasks) : 0;
 
-    const categories = await Category.findAll({
-      where: { userId },
-      attributes: ["id", "name", "color"],
-    });
-
     const categoryStats = categories.map((cat) => {
       const catTasks = tasks.filter((t) => t.categoryId === cat.id);
       const catCompleted = catTasks.filter(
@@ -183,19 +194,6 @@ router.get("/", async (req, res) => {
       });
     }
 
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
-
-    const allRecentTasks = await Task.findAll({
-      where: {
-        [Op.and]: [
-          baseWhere,
-          { status: "Hoàn thành", updatedAt: { [Op.gte]: thirtyDaysAgo } },
-        ],
-      },
-      attributes: ["id", "updatedAt"],
-    });
-
     const completedByDay = {};
     for (let i = 0; i < 30; i++) {
       const d = new Date(thirtyDaysAgo);
@@ -216,6 +214,91 @@ router.get("/", async (req, res) => {
       date,
       count,
     }));
+
+    // ==================================================
+    // TEAM WORKLOAD (PHÂN BỔ KHỐI LƯỢNG CÔNG VIỆC THEO THÀNH VIÊN)
+    // ==================================================
+    const taskIds = tasks.map((t) => t.id);
+    const taskAssignees = taskIds.length
+      ? await TaskAssignee.findAll({
+          where: { taskId: { [Op.in]: taskIds } },
+          attributes: ["taskId", "userId"],
+        })
+      : [];
+
+    const assigneesByTask = new Map();
+    const involvedUserIds = new Set();
+    for (const ta of taskAssignees) {
+      involvedUserIds.add(ta.userId);
+      if (!assigneesByTask.has(ta.taskId)) assigneesByTask.set(ta.taskId, []);
+      assigneesByTask.get(ta.taskId).push(ta.userId);
+    }
+
+    const workloadUsers = involvedUserIds.size
+      ? await User.findAll({
+          where: { id: { [Op.in]: [...involvedUserIds] } },
+          attributes: ["id", "name", "email", "avatar"],
+        })
+      : [];
+    const userLookup = new Map(workloadUsers.map((u) => [u.id, u.toJSON()]));
+
+    const memberMap = new Map();
+    let unassignedActive = 0;
+    let unassignedTotal = 0;
+
+    for (const task of tasks) {
+      const isCompleted = task.status === "Hoàn thành" || task.progress === 100;
+      const isOverdue = (() => {
+        if (!task.dueDate || isCompleted) return false;
+        const d = new Date(task.dueDate);
+        d.setHours(0, 0, 0, 0);
+        return d < today;
+      })();
+      const isUrgent = !isCompleted && (task.priority === "Khẩn cấp" || task.priority === "Cao");
+      const assignedIds = assigneesByTask.get(task.id) || [];
+
+      if (assignedIds.length === 0) {
+        unassignedTotal++;
+        if (!isCompleted) unassignedActive++;
+        continue;
+      }
+
+      for (const uid of assignedIds) {
+        if (!memberMap.has(uid)) {
+          const u = userLookup.get(uid) || { id: uid, name: "Thành viên", email: "", avatar: null };
+          memberMap.set(uid, {
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            avatar: u.avatar,
+            total: 0,
+            active: 0,
+            completed: 0,
+            overdue: 0,
+            urgent: 0,
+          });
+        }
+        const entry = memberMap.get(uid);
+        entry.total++;
+        if (isCompleted) entry.completed++;
+        else entry.active++;
+        if (isOverdue) entry.overdue++;
+        if (isUrgent) entry.urgent++;
+      }
+    }
+
+    const byMember = [...memberMap.values()]
+      .map((m) => ({
+        ...m,
+        completionRate: m.total > 0 ? Math.round((m.completed / m.total) * 100) : 0,
+        loadLevel:
+          m.active >= 5 || m.overdue >= 2
+            ? "overloaded"
+            : m.active >= 3
+            ? "busy"
+            : "balanced",
+      }))
+      .sort((a, b) => b.active - a.active || b.total - a.total);
 
     res.json({
       overview: {
@@ -247,6 +330,8 @@ router.get("/", async (req, res) => {
         low: lowCount,
       },
       byCategory: categoryStats,
+      byMember,
+      unassignedStats: { total: unassignedTotal, active: unassignedActive },
       lineChart: lineChartData,
       period,
     });

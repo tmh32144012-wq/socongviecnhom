@@ -150,21 +150,24 @@
 .board-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.2s ease;
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s ease;
   box-shadow: var(--surface-highlight), var(--shadow-sm);
 }
 
 .board-card:hover {
   transform: translateY(-3px);
-  box-shadow: var(--surface-highlight), var(--shadow-md);
-  border-color: var(--board-color, var(--accent-color));
+  box-shadow:
+    var(--surface-highlight),
+    0 18px 34px -14px color-mix(in srgb, var(--board-color, var(--accent-color)) 38%, rgba(0, 0, 0, 0.32));
+  border-color: color-mix(in srgb, var(--board-color, var(--accent-color)) 72%, var(--border-strong));
 }
 
 /* ARCHITECTURAL MINI-KANBAN COVER */

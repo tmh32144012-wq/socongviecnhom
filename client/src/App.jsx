@@ -1,31 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { Menu, Search, X, Plus, Bell } from "lucide-react";
 import "./App.css";
 
 import Sidebar from "./components/Sidebar";
 import ThemeQuickMenu from "./components/ThemeQuickMenu";
-import Boards from "./components/Boards";
-import Dashboard from "./components/Dashboard";
-import Tasks from "./components/Tasks";
-import TaskDetail from "./components/TaskDetail";
-import Categories from "./components/Categories";
-import Settings from "./components/Settings";
-import TaskStatus from "./components/TaskStatus";
-import Notifications from "./components/Notifications";
-import Statistics from "./components/Statistics";
-import Archive from "./components/Archive";
-import CalendarPage from "./components/CalendarPage";
 import Toast from "./components/Toast";
 import ConfirmModal from "./components/ConfirmModal";
-import Login from "./Login";
-import Register from "./Register";
-import WelcomeShowcase from "./components/WelcomeShowcase";
-import AI from "./AI";
-import MyDay from "./components/MyDay";
-import Kanban from "./components/Kanban";
 import TaskFormModal from "./components/TaskFormModal";
 import UserAvatar from "./components/UserAvatar";
-import { API_BASE, API_ENDPOINTS, getAuthHeaders } from "./config/api";
+import { API_ENDPOINTS, getAuthHeaders } from "./config/api";
 import {
   connectSocket,
   disconnectSocket,
@@ -33,6 +16,34 @@ import {
   leaveBoardRoom,
 } from "./config/socket";
 import { parseAppRoute, useUrlRouter } from "./hooks/useUrlRouter";
+
+// Code-splitting theo từng trang (React.lazy) — cắt giảm mạnh kích thước bundle khởi tạo
+const Boards = lazy(() => import("./components/Boards"));
+const Dashboard = lazy(() => import("./components/Dashboard"));
+const Tasks = lazy(() => import("./components/Tasks"));
+const TaskDetail = lazy(() => import("./components/TaskDetail"));
+const Categories = lazy(() => import("./components/Categories"));
+const Settings = lazy(() => import("./components/Settings"));
+const TaskStatus = lazy(() => import("./components/TaskStatus"));
+const Notifications = lazy(() => import("./components/Notifications"));
+const Statistics = lazy(() => import("./components/Statistics"));
+const Archive = lazy(() => import("./components/Archive"));
+const CalendarPage = lazy(() => import("./components/CalendarPage"));
+const AI = lazy(() => import("./AI"));
+const MyDay = lazy(() => import("./components/MyDay"));
+const Kanban = lazy(() => import("./components/Kanban"));
+const Login = lazy(() => import("./Login"));
+const Register = lazy(() => import("./Register"));
+const WelcomeShowcase = lazy(() => import("./components/WelcomeShowcase"));
+
+function PageLazyFallback() {
+  return (
+    <div className="page-lazy-loader" role="status" aria-live="polite">
+      <div className="page-lazy-spinner" aria-hidden="true" />
+      <span>Đang tải giao diện...</span>
+    </div>
+  );
+}
 
 function App() {
   // ==================================================
@@ -74,6 +85,7 @@ function App() {
     isDanger: false,
     onConfirm: null,
     onSecondary: null,
+    onCancel: null,
   });
 
   const askConfirm = ({
@@ -85,6 +97,7 @@ function App() {
     isDanger = false,
     onConfirm,
     onSecondary = null,
+    onCancel = null,
   }) => {
     setConfirmModal({
       isOpen: true,
@@ -102,6 +115,10 @@ function App() {
         setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         if (onSecondary) await onSecondary();
       },
+      onCancel: () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        if (onCancel) onCancel();
+      },
     });
   };
 
@@ -111,6 +128,55 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const initialRoute = parseAppRoute();
   const [currentPage, setCurrentPage] = useState(initialRoute.page === "detail" ? "boards" : initialRoute.page);
+
+  // Xử lý callback đăng nhập Google / Facebook OAuth 2.0 (?oauth_code=... hoặc ?oauth_error=...)
+  const oauthHandledRef = useRef(false);
+  useEffect(() => {
+    if (oauthHandledRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const oauthCode = params.get("oauth_code");
+    const oauthError = params.get("oauth_error");
+    if (!oauthCode && !oauthError) return;
+
+    oauthHandledRef.current = true;
+    window.history.replaceState({}, "", window.location.pathname || "/");
+
+    if (oauthError) {
+      sessionStorage.setItem("skippedIntro", "true");
+      setAuthPage("login");
+      const errorMap = {
+        GOOGLE_NOT_CONFIGURED: "Chưa cấu hình GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET trong server/.env.",
+        FACEBOOK_NOT_CONFIGURED: "Chưa cấu hình FACEBOOK_APP_ID / FACEBOOK_APP_SECRET trong server/.env.",
+        GOOGLE_CANCELLED: "Bạn đã hủy đăng nhập bằng Google.",
+        FACEBOOK_CANCELLED: "Bạn đã hủy đăng nhập bằng Facebook.",
+      };
+      showToast(errorMap[oauthError] || "Đăng nhập mạng xã hội thất bại. Vui lòng thử lại!", "error");
+      return;
+    }
+
+    (async () => {
+      try {
+        const res = await fetch(API_ENDPOINTS.oauthExchange, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: oauthCode }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.token || !data.user) {
+          throw new Error(data.message || "Không thể hoàn tất đăng nhập mạng xã hội!");
+        }
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("currentUser", JSON.stringify(data.user));
+        setCurrentUser(data.user);
+        setCurrentPage("boards");
+        showToast(data.message || "Đăng nhập thành công!", "success");
+      } catch (err) {
+        sessionStorage.setItem("skippedIntro", "true");
+        setAuthPage("login");
+        showToast(err.message || "Đăng nhập mạng xã hội không thành công!", "error");
+      }
+    })();
+  }, [showToast]);
   const [previousPage, setPreviousPage] = useState("boards");
   const [statusPage, setStatusPage] = useState("all");
   const [selectedTask, setSelectedTask] = useState(null);
@@ -794,7 +860,11 @@ function App() {
     if (!res.ok) throw new Error(data.message || "Không thể thêm công việc");
 
     const created = data.task;
-    setTasks((prev) => [created, ...prev]);
+    setTasks((prev) =>
+      prev.some((t) => t.id === created.id)
+        ? prev.map((t) => (t.id === created.id ? created : t))
+        : [created, ...prev]
+    );
     if (created.boardId && Number(created.boardId) === Number(activeBoardId)) {
       setActiveBoardData((prev) =>
         prev && !prev.tasks.some((t) => t.id === created.id)
@@ -1003,7 +1073,11 @@ function App() {
       });
       if (!res.ok) throw new Error("Không thể khôi phục công việc");
       const data = await res.json();
-      setTasks((prev) => [data.task, ...prev]);
+      setTasks((prev) =>
+        prev.some((t) => t.id === data.task.id)
+          ? prev.map((t) => (t.id === data.task.id ? data.task : t))
+          : [data.task, ...prev]
+      );
       if (activeBoardId && Number(data.task.boardId) === Number(activeBoardId)) {
         fetchBoardDetail(activeBoardId, true);
       }
@@ -1093,6 +1167,7 @@ function App() {
             resolve(false);
           }
         },
+        onCancel: () => resolve(false),
       });
     });
   };
@@ -1196,7 +1271,7 @@ function App() {
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
       showToast("Đã đánh dấu tất cả là đã đọc!", "success");
-    } catch (err) {
+    } catch {
       showToast("Không thể cập nhật thông báo", "error");
     }
   };
@@ -1222,7 +1297,7 @@ function App() {
       setNotifications([]);
       setUnreadCount(0);
       showToast("Đã xóa toàn bộ thông báo!", "info");
-    } catch (err) {
+    } catch {
       showToast("Không thể xóa thông báo", "error");
     }
   };
@@ -1306,7 +1381,7 @@ function App() {
         setActiveBoardId(parsed.boardId);
         setCurrentPage("kanban");
       } else if (parsed.page === "detail" && parsed.taskId) {
-        openTaskById(parsed.taskId);
+        handleOpenTaskById(parsed.taskId);
       } else {
         setCurrentPage(parsed.page || "boards");
       }
@@ -1314,12 +1389,15 @@ function App() {
   });
 
   // Hỗ trợ mở thẳng deep-link /tasks/:id sau khi đăng nhập
+  const deepLinkCheckedRef = useRef(false);
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || deepLinkCheckedRef.current) return;
+    deepLinkCheckedRef.current = true;
     const parsed = parseAppRoute(window.location.pathname);
-    if (parsed.page === "detail" && parsed.taskId && selectedTask?.id !== parsed.taskId) {
-      openTaskById(parsed.taskId);
+    if (parsed.page === "detail" && parsed.taskId) {
+      handleOpenTaskById(parsed.taskId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
   const handleUpdateAvatar = async (avatar) => {
@@ -1335,7 +1413,7 @@ function App() {
         localStorage.setItem("currentUser", JSON.stringify(updated));
         showToast("Đã cập nhật ảnh đại diện!", "success");
       }
-    } catch (err) {
+    } catch {
       showToast("Không thể cập nhật ảnh đại diện", "error");
     }
   };
@@ -1348,11 +1426,18 @@ function App() {
         body: JSON.stringify({ password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Lỗi xóa tài khoản");
-      showToast("Tài khoản đã được xóa.", "info");
+      if (!res.ok) {
+        const msg = data.message || "Không thể xóa tài khoản!";
+        showToast(msg, "error");
+        return { ok: false, message: msg };
+      }
+      showToast(data.message || "Tài khoản đã được xóa vĩnh viễn.", "info");
       handleLogout();
+      return { ok: true };
     } catch (err) {
-      showToast(err.message, "error");
+      const msg = err.message || "Không thể kết nối đến máy chủ!";
+      showToast(msg, "error");
+      return { ok: false, message: msg };
     }
   };
 
@@ -1390,10 +1475,12 @@ function App() {
       return (
         <>
           <Toast toasts={toasts} removeToast={removeToast} />
-          <WelcomeShowcase
-            onSkipToLogin={() => goToAuth("login")}
-            onGoToRegister={() => goToAuth("register")}
-          />
+          <Suspense fallback={<PageLazyFallback />}>
+            <WelcomeShowcase
+              onSkipToLogin={() => goToAuth("login")}
+              onGoToRegister={() => goToAuth("register")}
+            />
+          </Suspense>
         </>
       );
     }
@@ -1401,22 +1488,26 @@ function App() {
       return (
         <>
           <Toast toasts={toasts} removeToast={removeToast} />
-          <Register
-            onRegister={handleRegister}
-            goToLogin={() => goToAuth("login")}
-            onBackToIntro={() => setAuthPage("intro")}
-          />
+          <Suspense fallback={<PageLazyFallback />}>
+            <Register
+              onRegister={handleRegister}
+              goToLogin={() => goToAuth("login")}
+              onBackToIntro={() => setAuthPage("intro")}
+            />
+          </Suspense>
         </>
       );
     }
     return (
       <>
         <Toast toasts={toasts} removeToast={removeToast} />
-        <Login
-          onLogin={handleLogin}
-          onRegister={() => goToAuth("register")}
-          onBackToIntro={() => setAuthPage("intro")}
-        />
+        <Suspense fallback={<PageLazyFallback />}>
+          <Login
+            onLogin={handleLogin}
+            onRegister={() => goToAuth("register")}
+            onBackToIntro={() => setAuthPage("intro")}
+          />
+        </Suspense>
       </>
     );
   }
@@ -1426,6 +1517,9 @@ function App() {
   // ==================================================
   return (
     <div className="app">
+      <a href="#main-content" className="skip-to-content">
+        Chuyển đến nội dung chính
+      </a>
       <Toast toasts={toasts} removeToast={removeToast} />
       <ConfirmModal
         isOpen={confirmModal.isOpen}
@@ -1437,7 +1531,10 @@ function App() {
         isDanger={confirmModal.isDanger}
         onConfirm={confirmModal.onConfirm}
         onSecondary={confirmModal.onSecondary}
-        onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        onCancel={
+          confirmModal.onCancel ||
+          (() => setConfirmModal((prev) => ({ ...prev, isOpen: false })))
+        }
       />
       <TaskFormModal
         isOpen={showForm}
@@ -1469,7 +1566,7 @@ function App() {
         onMobileClose={() => setMobileSidebarOpen(false)}
       />
 
-      <main className={sidebarCollapsed ? "main expanded" : "main"}>
+      <main id="main-content" className={sidebarCollapsed ? "main expanded" : "main"}>
         {/* TOP HEADER */}
         <header className="app-top-header">
           <div className="app-header-left">
@@ -1490,6 +1587,7 @@ function App() {
                 <input
                   ref={searchInputRef}
                   type="text"
+                  aria-label="Tìm kiếm thẻ công việc trong tất cả bảng"
                   placeholder="Tìm kiếm thẻ công việc trong tất cả bảng..."
                   value={globalSearch}
                   onChange={(e) => setGlobalSearch(e.target.value)}
@@ -1601,8 +1699,17 @@ function App() {
 
             <div
               className="app-header-user"
+              role="button"
+              tabIndex={0}
               onClick={() => setCurrentPage("settings")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setCurrentPage("settings");
+                }
+              }}
               title="Hồ sơ & Cài đặt"
+              aria-label="Mở Hồ sơ & Cài đặt"
             >
               <UserAvatar avatar={currentUser?.avatar} name={currentUser?.name} size={28} />
               <span className="app-header-username">{currentUser?.name || "Người dùng"}</span>
@@ -1610,8 +1717,9 @@ function App() {
           </div>
         </header>
 
-        {/* PAGE CONTENT */}
+        {/* PAGE CONTENT (Lazy-loaded chunks with Suspense) */}
         <div key={currentPage} className="page-enter">
+          <Suspense fallback={<PageLazyFallback />}>
           {currentPage === "boards" && (
             <Boards
               boards={boards}
@@ -1709,24 +1817,6 @@ function App() {
 
           {currentPage === "status" && (
             <TaskStatus
-              title={
-                statusPage === "all"
-                  ? "Tất cả công việc"
-                  : statusPage === "doing"
-                  ? "Công việc đang thực hiện"
-                  : statusPage === "completed"
-                  ? "Công việc đã hoàn thành"
-                  : "Công việc quá hạn"
-              }
-              description={
-                statusPage === "all"
-                  ? "Danh sách toàn bộ công việc nhóm và cá nhân"
-                  : statusPage === "doing"
-                  ? "Các đầu việc đang được triển khai"
-                  : statusPage === "completed"
-                  ? "Các đầu việc đã hoàn tất"
-                  : "Các công việc đã quá hạn cần xử lý ngay"
-              }
               tasks={tasks}
               categories={categories}
               status={statusPage}
@@ -1734,6 +1824,7 @@ function App() {
               setSelectedTask={(t) => openTaskDetail(t)}
               getPriorityClass={getPriorityClass}
               getTaskProgress={getTaskProgress}
+              completeTask={completeTask}
             />
           )}
 
@@ -1787,6 +1878,8 @@ function App() {
               fetchCategories={fetchCategories}
               setCurrentPage={setCurrentPage}
               setCategoryFilter={setCategoryFilter}
+              showToast={showToast}
+              askConfirm={askConfirm}
             />
           )}
 
@@ -1827,7 +1920,9 @@ function App() {
             />
           )}
 
-          {currentPage === "ai" && <AI tasks={tasks} categories={categories} />}
+          {currentPage === "ai" && (
+            <AI currentUser={currentUser} tasks={tasks} categories={categories} />
+          )}
 
           {currentPage === "task-detail" && selectedTask && (
             <TaskDetail
@@ -1853,6 +1948,7 @@ function App() {
               askConfirm={askConfirm}
             />
           )}
+          </Suspense>
         </div>
       </main>
     </div>

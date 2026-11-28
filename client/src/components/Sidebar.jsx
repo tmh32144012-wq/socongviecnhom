@@ -18,6 +18,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import UserAvatar from "./UserAvatar";
+import BrandLogo from "./BrandLogo";
 import { useTheme } from "../context/ThemeContext";
 
 const menuSections = [
@@ -192,15 +193,11 @@ function Sidebar({
         {/* TOP: LOGO + COLLAPSE */}
         <div className="sidebar-top">
           <div className="sidebar-logo">
-            <div className="sidebar-logo-icon">
-              <KanbanSquare size={17} strokeWidth={2} />
-            </div>
-            {!collapsed && (
-              <div className="sidebar-logo-group">
-                <span className="sidebar-logo-text">Sổ Việc Nhóm</span>
-                <span className="sidebar-logo-sub">Kanban Workspace</span>
-              </div>
-            )}
+            <BrandLogo
+              size="sm"
+              showText={!collapsed}
+              subtitle="Kanban Realtime"
+            />
           </div>
 
           <button

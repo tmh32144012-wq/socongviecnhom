@@ -27,7 +27,6 @@ import {
   Users,
   MessageSquare,
   Paperclip,
-  Folder,
   ExternalLink,
   Check,
   FileText,
@@ -315,6 +314,55 @@ function Statistics({
 
   const byCategory = useMemo(() => statsData?.byCategory || [], [statsData]);
   const lineChartDataRaw = useMemo(() => statsData?.lineChart || [], [statsData]);
+  const byMember = useMemo(() => {
+    if (Array.isArray(statsData?.byMember)) return statsData.byMember;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const map = new Map();
+    tasks.forEach((t) => {
+      if (t.isArchived) return;
+      const isDone = t.status === "Hoàn thành" || t.progress === 100;
+      const isOverdue = !isDone && t.dueDate && new Date(t.dueDate).setHours(0, 0, 0, 0) < today.getTime();
+      const isUrgent = !isDone && (t.priority === "Khẩn cấp" || t.priority === "Cao");
+      (t.assignees || []).forEach((u) => {
+        if (!map.has(u.id)) {
+          map.set(u.id, {
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            avatar: u.avatar,
+            total: 0,
+            active: 0,
+            completed: 0,
+            overdue: 0,
+            urgent: 0,
+          });
+        }
+        const row = map.get(u.id);
+        row.total++;
+        if (isDone) row.completed++;
+        else row.active++;
+        if (isOverdue) row.overdue++;
+        if (isUrgent) row.urgent++;
+      });
+    });
+    return [...map.values()]
+      .map((m) => ({
+        ...m,
+        completionRate: m.total > 0 ? Math.round((m.completed / m.total) * 100) : 0,
+        loadLevel: m.active >= 5 || m.overdue >= 2 ? "overloaded" : m.active >= 3 ? "busy" : "balanced",
+      }))
+      .sort((a, b) => b.active - a.active || b.total - a.total);
+  }, [statsData, tasks]);
+
+  const unassignedStats = useMemo(() => {
+    if (statsData?.unassignedStats) return statsData.unassignedStats;
+    const unassigned = tasks.filter((t) => !t.isArchived && (!t.assignees || t.assignees.length === 0));
+    return {
+      total: unassigned.length,
+      active: unassigned.filter((t) => t.status !== "Hoàn thành" && t.progress !== 100).length,
+    };
+  }, [statsData, tasks]);
 
   // 1. Doughnut Chart (borderWidth: 0)
   const doughnutData = {
@@ -952,6 +1000,158 @@ function Statistics({
             </p>
           </div>
         </div>
+      </section>
+
+      {/* TEAM WORKLOAD / CAPACITY BREAKDOWN */}
+      <section className="tech-panel" style={{ marginTop: 18 }}>
+        <div className="tech-panel-head">
+          <div className="tech-panel-title">
+            <Users size={16} strokeWidth={1.85} />
+            <h2>Phân bổ khối lượng công việc theo thành viên ({byMember.length})</h2>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {unassignedStats.active > 0 && (
+              <span
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  padding: "3px 9px",
+                  borderRadius: 999,
+                  background: "rgba(245, 158, 11, 0.14)",
+                  color: "#d97706",
+                }}
+              >
+                {unassignedStats.active} việc đang mở chưa phân công
+              </span>
+            )}
+            <span className="tech-module-code">TEAM.WORKLOAD</span>
+          </div>
+        </div>
+
+        {byMember.length === 0 ? (
+          <div style={{ padding: "22px 20px", fontSize: 13, color: "var(--text-secondary)" }}>
+            Chưa có công việc nào được gán thành viên phụ trách. Hãy gán thành viên trên thẻ Kanban để theo dõi tải công việc của từng người.
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: 16,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {byMember.map((member) => {
+              const loadBadge =
+                member.loadLevel === "overloaded"
+                  ? { label: "Quá tải", bg: "rgba(239,68,68,0.14)", color: "#ef4444" }
+                  : member.loadLevel === "busy"
+                  ? { label: "Đang bận", bg: "rgba(245,158,11,0.14)", color: "#d97706" }
+                  : { label: "Cân bằng", bg: "rgba(16,185,129,0.14)", color: "#10b981" };
+              const donePct = member.total > 0 ? Math.round((member.completed / member.total) * 100) : 0;
+              const overduePct = member.total > 0 ? Math.round((member.overdue / member.total) * 100) : 0;
+              const activeNormalPct = Math.max(0, 100 - donePct - overduePct);
+
+              return (
+                <div
+                  key={member.id}
+                  style={{
+                    padding: 14,
+                    borderRadius: 11,
+                    border: "1px solid var(--border-color)",
+                    background: "var(--bg-input)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                      <UserAvatar avatar={member.avatar} name={member.name} size={34} />
+                      <div style={{ minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: 13.5,
+                            fontWeight: 700,
+                            color: "var(--text-primary)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {member.name}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
+                          {member.total} việc · Hoàn thành {member.completionRate}%
+                        </div>
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 999,
+                        background: loadBadge.bg,
+                        color: loadBadge.color,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {loadBadge.label}
+                    </span>
+                  </div>
+
+                  {/* Stacked Workload Bar */}
+                  <div
+                    style={{
+                      height: 7,
+                      borderRadius: 999,
+                      background: "var(--border-color)",
+                      overflow: "hidden",
+                      display: "flex",
+                    }}
+                    title={`Hoàn thành: ${member.completed} | Đang làm: ${Math.max(0, member.active - member.overdue)} | Quá hạn: ${member.overdue}`}
+                  >
+                    <div style={{ width: `${donePct}%`, background: "#10B981" }} />
+                    <div style={{ width: `${activeNormalPct}%`, background: "#3B82F6" }} />
+                    <div style={{ width: `${overduePct}%`, background: "#EF4444" }} />
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(4, 1fr)",
+                      gap: 6,
+                      fontSize: 11.5,
+                      textAlign: "center",
+                    }}
+                  >
+                    <div style={{ padding: "5px 4px", borderRadius: 7, background: "var(--bg-surface)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: 10.5 }}>Đang mở</div>
+                      <strong style={{ color: "#3B82F6" }}>{member.active}</strong>
+                    </div>
+                    <div style={{ padding: "5px 4px", borderRadius: 7, background: "var(--bg-surface)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: 10.5 }}>Xong</div>
+                      <strong style={{ color: "#10B981" }}>{member.completed}</strong>
+                    </div>
+                    <div style={{ padding: "5px 4px", borderRadius: 7, background: "var(--bg-surface)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: 10.5 }}>Quá hạn</div>
+                      <strong style={{ color: member.overdue > 0 ? "#EF4444" : "var(--text-primary)" }}>
+                        {member.overdue}
+                      </strong>
+                    </div>
+                    <div style={{ padding: "5px 4px", borderRadius: 7, background: "var(--bg-surface)" }}>
+                      <div style={{ color: "var(--text-muted)", fontSize: 10.5 }}>Ưu tiên</div>
+                      <strong style={{ color: member.urgent > 0 ? "#F59E0B" : "var(--text-primary)" }}>
+                        {member.urgent}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* COMPLETED TASK EXECUTION AUDIT INSPECTOR */}

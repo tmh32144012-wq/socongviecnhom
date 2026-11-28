@@ -40,6 +40,19 @@ function initializeModels(sequelize) {
       allowNull: false,
       defaultValue: 0,
     },
+    authProvider: {
+      type: DataTypes.STRING(30),
+      allowNull: false,
+      defaultValue: 'local', // 'local' | 'google' | 'facebook'
+    },
+    googleId: {
+      type: DataTypes.STRING(120),
+      allowNull: true,
+    },
+    facebookId: {
+      type: DataTypes.STRING(120),
+      allowNull: true,
+    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -190,6 +203,11 @@ function initializeModels(sequelize) {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
+    },
+    wipLimit: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
     },
     createdAt: {
       type: DataTypes.DATE,
@@ -350,6 +368,11 @@ function initializeModels(sequelize) {
     content: {
       type: DataTypes.TEXT,
       allowNull: false,
+    },
+    isAi: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     createdAt: {
       type: DataTypes.DATE,
@@ -537,9 +560,25 @@ function initializeModels(sequelize) {
     boardId: { type: DataTypes.INTEGER, allowNull: false },
     userId: { type: DataTypes.INTEGER, allowNull: false },
     content: { type: DataTypes.TEXT, allowNull: false },
+    isAi: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
   }, {
     tableName: 'BoardMessages',
+    timestamps: false,
+  });
+
+  // ===================================
+  // 16. AI CHAT SESSIONS (Lưu 3 đoạn chat gần nhất theo từng tài khoản)
+  // ===================================
+  const AiChatSession = sequelize.define('AiChatSession', {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    userId: { type: DataTypes.INTEGER, allowNull: false },
+    title: { type: DataTypes.STRING(200), allowNull: false, defaultValue: 'Cuộc trò chuyện mới' },
+    messagesJson: { type: DataTypes.TEXT, allowNull: false, defaultValue: '[]' },
+    createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+    updatedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+  }, {
+    tableName: 'AiChatSessions',
     timestamps: false,
   });
 
@@ -635,6 +674,9 @@ function initializeModels(sequelize) {
   User.hasMany(ActivityLog, { foreignKey: 'userId', as: 'activities', onDelete: 'NO ACTION' });
   ActivityLog.belongsTo(User, { foreignKey: 'userId', as: 'actor' });
 
+  User.hasMany(AiChatSession, { foreignKey: 'userId', as: 'aiChatSessions', onDelete: 'CASCADE' });
+  AiChatSession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
   return {
     User,
     Category,
@@ -652,6 +694,7 @@ function initializeModels(sequelize) {
     TaskLabel,
     BoardMessage,
     PasswordReset,
+    AiChatSession,
   };
 }
 
@@ -670,6 +713,12 @@ async function runSafeMigrations(sequelize) {
           ALTER TABLE Users ADD systemRole NVARCHAR(30) NOT NULL CONSTRAINT DF_Users_systemRole DEFAULT 'user';
         IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'tokenVersion')
           ALTER TABLE Users ADD tokenVersion INT NOT NULL CONSTRAINT DF_Users_tokenVersion DEFAULT 0;
+        IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'authProvider')
+          ALTER TABLE Users ADD authProvider NVARCHAR(30) NOT NULL CONSTRAINT DF_Users_authProvider DEFAULT 'local';
+        IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'googleId')
+          ALTER TABLE Users ADD googleId NVARCHAR(120) NULL;
+        IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'facebookId')
+          ALTER TABLE Users ADD facebookId NVARCHAR(120) NULL;
       END
     `);
 
@@ -913,6 +962,42 @@ async function runSafeMigrations(sequelize) {
           createdAt DATETIMEOFFSET NOT NULL CONSTRAINT DF_PasswordResets_createdAt DEFAULT SYSDATETIMEOFFSET(),
           CONSTRAINT FK_PasswordResets_User FOREIGN KEY (userId) REFERENCES dbo.Users(id) ON DELETE CASCADE
         );
+      END
+    `);
+
+    await sequelize.query(`
+      IF OBJECT_ID('AiChatSessions', 'U') IS NULL AND OBJECT_ID('Users', 'U') IS NOT NULL
+      BEGIN
+        CREATE TABLE dbo.AiChatSessions (
+          id INT IDENTITY(1,1) PRIMARY KEY,
+          userId INT NOT NULL,
+          title NVARCHAR(200) NOT NULL CONSTRAINT DF_AiChatSessions_title DEFAULT N'Cuộc trò chuyện mới',
+          messagesJson NVARCHAR(MAX) NOT NULL CONSTRAINT DF_AiChatSessions_messages DEFAULT N'[]',
+          createdAt DATETIMEOFFSET NOT NULL CONSTRAINT DF_AiChatSessions_createdAt DEFAULT SYSDATETIMEOFFSET(),
+          updatedAt DATETIMEOFFSET NOT NULL CONSTRAINT DF_AiChatSessions_updatedAt DEFAULT SYSDATETIMEOFFSET(),
+          CONSTRAINT FK_AiChatSessions_User FOREIGN KEY (userId) REFERENCES dbo.Users(id) ON DELETE CASCADE
+        );
+      END
+    `);
+
+    await sequelize.query(`
+      IF OBJECT_ID('TaskComments', 'U') IS NOT NULL AND COL_LENGTH('TaskComments', 'isAi') IS NULL
+      BEGIN
+        ALTER TABLE dbo.TaskComments ADD isAi BIT NOT NULL CONSTRAINT DF_TaskComments_isAi DEFAULT 0;
+      END
+    `);
+
+    await sequelize.query(`
+      IF OBJECT_ID('BoardMessages', 'U') IS NOT NULL AND COL_LENGTH('BoardMessages', 'isAi') IS NULL
+      BEGIN
+        ALTER TABLE dbo.BoardMessages ADD isAi BIT NOT NULL CONSTRAINT DF_BoardMessages_isAi DEFAULT 0;
+      END
+    `);
+
+    await sequelize.query(`
+      IF OBJECT_ID('BoardColumns', 'U') IS NOT NULL AND COL_LENGTH('BoardColumns', 'wipLimit') IS NULL
+      BEGIN
+        ALTER TABLE dbo.BoardColumns ADD wipLimit INT NULL;
       END
     `);
 
